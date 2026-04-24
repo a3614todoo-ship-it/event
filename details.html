@@ -69,6 +69,13 @@
                             <input type="email" id="userEmail" placeholder="用於接收報名確認信" required>
                         </div>
                         <div id="dynamicFieldsContainer"></div>
+                        
+                        <!-- Honeypot field to filter bots. Humans won't see this. -->
+                        <div class="hp-field" aria-hidden="true">
+                            <label for="userMiddleName">Middle Name</label>
+                            <input type="text" id="userMiddleName" name="userMiddleName" tabindex="-1" autocomplete="off">
+                        </div>
+
                         <button type="submit" id="submitBtn" class="btn-submit">確認報名</button>
                     </form>
                 </div>

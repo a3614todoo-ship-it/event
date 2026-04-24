@@ -233,6 +233,47 @@ function setupForm() {
         const phone = document.getElementById('userPhone').value.trim();
         const email = document.getElementById('userEmail').value.trim();
 
+        // [資安] 1. Honeypot 檢查 (防機器人)
+        const hpField = document.getElementById('userMiddleName').value;
+        if (hpField) {
+            console.warn("Spam detected via honeypot.");
+            location.href = 'index.html';
+            return;
+        }
+
+        // [資安] 2. 頻率限制 (防短時間大量提交)
+        const lastSubmit = localStorage.getItem(`last_submit_${eventId}`);
+        const now = Date.now();
+        if (lastSubmit && (now - lastSubmit < 30000)) { // 30秒冷卻
+            alert("提交過於頻繁，請稍候 30 秒再試。");
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+        }
+
+        // [資安] 3. 重複報名檢查 (Email)
+        try {
+            // 改用僅根據 eventId 查詢，避免需要手動建立複合索引 (Composite Index)
+            const dupCheck = await db.collection("event_registrations")
+                .where("eventId", "==", eventId)
+                .get();
+            
+            // 在前端進行 Email 過濾，確保 100% 攔截
+            const isAlreadyReg = dupCheck.docs.some(doc => {
+                const data = doc.data();
+                return data.userEmail === email && data.status !== 'cancelled';
+            });
+
+            if (isAlreadyReg) {
+                alert("此電子郵件已報名過本活動（或已在候補名單中），請勿重複報名。");
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+                return;
+            }
+        } catch (err) {
+            console.warn("Duplicate check failed, proceeding anyway:", err);
+        }
+
         const capacity = parseInt(currentEvent.capacity) || 0;
         const isWaitlist = (registrationsCount >= capacity);
 
@@ -267,6 +308,9 @@ function setupForm() {
         try {
             const docRef = await db.collection("event_registrations").add(regData);
             
+            // 紀錄提交時間 (用於防灌水冷卻)
+            localStorage.setItem(`last_submit_${eventId}`, Date.now().toString());
+
             // 只有正式報名成功才寄信，候補則不寄信 (做法 B)
             if (!isWaitlist) {
                 sendRegistrationEmail({ id: docRef.id, ...regData });

@@ -189,6 +189,18 @@ input:focus {
     margin-top: 10px;
 }
 
+.btn-submit:disabled {
+    cursor: not-allowed;
+}
+
+/* Honeypot field - Hidden from humans */
+.hp-field {
+    display: none !important;
+    visibility: hidden !important;
+    position: absolute;
+    left: -9999px;
+}
+
 .btn-submit:hover {
     transform: translateY(-3px);
     box-shadow: 0 15px 35px rgba(217, 119, 6, 0.35);
