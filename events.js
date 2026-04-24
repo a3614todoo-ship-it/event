@@ -337,7 +337,7 @@ function showSuccessModal(isWaitlist) {
     
     if (isWaitlist) {
         titleEl.textContent = '候補登記成功！';
-        descEl.innerHTML = '目前活動名額已滿，系統已成功記錄您的候補請求。<br><br><strong style="color:var(--accent);">請注意：</strong> 此階段暫不發送 Email，<br>若有名額釋出，系統將會立即發送「遞補成功通知」至您的信箱。';
+        descEl.innerHTML = '目前活動名額已滿，系統已成功記錄您的候補請求。<br><br>請注意：若有名額釋出，系統將會立即發送「遞補成功通知」至您的信箱，請留意。';
     } else {
         titleEl.textContent = '報名成功！';
         descEl.innerHTML = '感謝您的參與，詳細資訊與報名序號已登錄。<br>系統已發送確認信至您的信箱，請查收。';
