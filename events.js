@@ -150,8 +150,8 @@ function renderUI() {
                 // 標題行：加粗、加大、加上左側飾條與上方間距
                 html += `<div style="font-weight: 700; color: var(--text-main); margin-top: 20px; margin-bottom: 6px; font-size: 1.05rem; border-left: 3px solid var(--accent); padding-left: 10px; line-height: 1.4;">${trimmed}</div>`;
             } else {
-                // 一般內文：使用柔和的顏色與較寬的行距
-                html += `<div style="color: var(--text-muted); margin-bottom: 8px; line-height: 1.8; padding-left: 13px;">${trimmed}</div>`;
+                // 一般內文：使用深色粗體，提升重要資訊的呈現效果
+                html += `<div style="color: var(--text-main); font-weight: 700; margin-bottom: 8px; line-height: 1.8; padding-left: 13px;">${trimmed}</div>`;
             }
         });
         
