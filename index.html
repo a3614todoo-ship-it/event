@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>藝境空間 | 藝術與空間的活動報名系統</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: 襯線體更符合藝術氣息 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <!-- 導航列 -->
+    <nav class="navbar">
+        <div class="nav-content container" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="logo" style="margin: 0;">藝境空間 ‧ <span style="font-weight: 300;">活動報名</span></div>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <ul class="nav-links" style="margin: 0;">
+                    <li><a href="#" class="active">當期活動</a></li>
+                    <li><a href="#about">關於我們</a></li>
+                </ul>
+                <a href="admin.html" id="adminQuickLink" style="display: none; background: var(--accent); color: white; text-decoration: none; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; transition: 0.3s;"><i class="fas fa-cog"></i> 進入後台</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero 區塊 (手繪風) -->
+    <header class="hero">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <h1>探索舞台的無限可能</h1>
+            <p>從大師講座到專業工作坊，為您的藝術之路注入靈魂。</p>
+        </div>
+    </header>
+
+    <!-- 搜尋區塊 -->
+    <section class="search-container">
+        <div class="search-wrapper">
+            <i class="fas fa-search"></i>
+            <input type="text" id="eventSearch" placeholder="搜尋想參加的藝術活動...">
+        </div>
+    </section>
+
+    <!-- 當期活動列表 -->
+    <main id="active-events" class="container">
+        <div id="eventGrid" class="event-grid">
+            <!-- 動態注入活動卡片 -->
+            <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: var(--text-muted);">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 15px;"></i>
+                <p>正在載入精彩活動...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- 關於我們區塊 -->
+    <section id="about" class="about-section">
+        <div class="container">
+            <div class="about-card">
+                <div class="about-img">
+                    <img src="assets/about_bg.png" alt="關於藝境">
+                </div>
+                <div class="about-info">
+                    <h3 style="font-size: 2.2rem; line-height: 1.4;">藝境空間｜<br><span style="font-weight: 300;">為創作而存在的活動報名系統</span></h3>
+                    <p style="margin-top: 20px;">創作者的時間，應該留給靈感，而不是行政。</p>
+                    <p style="font-weight: 700; color: var(--text-main); margin-top: 30px; font-size: 1.3rem;">這套活動報名系統的存在，只為一件事——<br>讓藝術家專心創作，其餘交給系統。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 頁尾 -->
+    <footer>
+        <div class="container">
+            <div style="font-family: 'Noto Serif TC', serif; font-size: 1.5rem; margin-bottom: 20px;">藝境空間</div>
+            <p>&copy; 2026 Yisun Space. All Rights Reserved.</p>
+            <div style="margin-top: 20px; display: flex; justify-content: center; gap: 20px; font-size: 1.2rem;">
+                <a href="#" style="color: var(--text-muted);"><i class="fab fa-facebook"></i></a>
+                <a href="#" style="color: var(--text-muted);"><i class="fab fa-instagram"></i></a>
+                <a href="#" style="color: var(--text-muted);"><i class="fas fa-envelope"></i></a>
+                <a href="admin.html" style="color: var(--text-muted); font-size: 0.9rem; align-self: flex-end; margin-left: 20px; text-decoration: none;"><i class="fas fa-cog"></i> 管理員登入</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="events_hub.js"></script>
+    <script>
+        // 簡單的搜尋監聽同步至 events_hub.js
+        document.getElementById('eventSearch').addEventListener('input', (e) => {
+            if (window.filterEvents) window.filterEvents(e.target.value);
+        });
+    </script>
+</body>
+</html>

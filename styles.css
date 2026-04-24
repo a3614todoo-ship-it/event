@@ -1,0 +1,334 @@
+/* 藝境空間 | 活動報名站 - 視覺大改造 (手繪藝術風) */
+
+:root {
+    --primary-bg: #fdfbf7;        /* 淺米色紙張底色 */
+    --card-bg: #ffffff;
+    --text-main: #4a3728;         /* 深棕色文字 */
+    --text-muted: #8d7a6b;
+    --accent: #d97706;            /* 暖橘/金色 */
+    --accent-hover: #b45309;
+    --border: rgba(141, 122, 107, 0.15);
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --hero-overlay: rgba(253, 251, 247, 0.2);
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@300;400;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background-color: var(--primary-bg);
+    color: var(--text-main);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+h1, h2, h3 {
+    font-family: 'Noto Serif TC', serif;
+    letter-spacing: 1px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* 導航欄 */
+.navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    padding: 20px 0;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    z-index: 1000;
+}
+
+.nav-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: var(--text-main);
+    font-weight: 500;
+    transition: 0.3s;
+}
+
+.nav-links a:hover, .nav-links a.active {
+    color: var(--accent);
+}
+
+.btn-main-outline {
+    padding: 8px 24px;
+    border: 1px solid var(--accent);
+    border-radius: 50px;
+    color: var(--accent) !important;
+}
+
+.btn-main-outline:hover {
+    background: var(--accent);
+    color: #fff !important;
+}
+
+/* Hero 區塊 */
+.hero {
+    height: 85vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+    background: url('assets/hero_events_bg.png') center/cover no-repeat;
+    margin-bottom: 80px;
+}
+
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, var(--hero-overlay), var(--primary-bg));
+}
+
+.hero-content {
+    position: relative;
+    z-index: 10;
+    max-width: 800px;
+}
+
+.hero h1 {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    color: var(--text-main);
+    text-shadow: 0 2px 10px rgba(255,255,255,0.8);
+    white-space: nowrap; /* 強制不折行 */
+}
+
+.hero p {
+    font-size: 1.3rem;
+    color: var(--text-muted);
+    font-weight: 300;
+}
+
+/* 搜尋區塊 */
+.search-container {
+    margin: -40px auto 60px;
+    position: relative;
+    z-index: 20;
+    max-width: 650px;
+    padding: 0 20px;
+}
+
+.search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-wrapper i {
+    position: absolute;
+    left: 30px;
+    color: var(--accent);
+    font-size: 1.2rem;
+}
+
+#eventSearch {
+    width: 100%;
+    padding: 22px 30px 22px 65px; /* 留出圖示空間 */
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 60px;
+    font-size: 1.15rem;
+    box-shadow: 0 20px 40px rgba(74, 55, 40, 0.1);
+    color: var(--text-main);
+    outline: none;
+    transition: all 0.3s ease;
+    font-family: 'Noto Sans TC', sans-serif;
+}
+
+#eventSearch:focus {
+    border-color: var(--accent);
+    box-shadow: 0 25px 50px rgba(217, 119, 6, 0.15);
+    transform: translateY(-2px);
+}
+
+#eventSearch::placeholder {
+    color: #bcae9e;
+}
+
+/* 活動卡片網格 */
+.event-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 40px;
+    margin-bottom: 100px;
+}
+
+.event-card {
+    background: var(--card-bg);
+    border-radius: 24px;
+    overflow: hidden;
+    transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
+    border: 1px solid var(--border);
+    box-shadow: 0 5px 15px rgba(74, 55, 40, 0.03);
+}
+
+.event-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(74, 55, 40, 0.1);
+}
+
+.event-img-wrapper {
+    height: 240px;
+    overflow: hidden;
+    position: relative;
+}
+
+.event-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: 0.5s;
+}
+
+.event-card:hover .event-img {
+    transform: scale(1.05);
+}
+
+.event-badge {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 6px 16px;
+    background: rgba(255,255,255,0.95);
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.event-info {
+    padding: 30px;
+}
+
+.event-info h3 {
+    font-size: 1.6rem;
+    margin-bottom: 15px;
+    color: var(--text-main);
+}
+
+.event-meta {
+    list-style: none;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.event-meta li {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 關於我們區塊 */
+.about-section {
+    padding: 100px 0;
+    background: #fdfaf5; /* 略深一點的米色背景 */
+    border-radius: 60px 60px 0 0;
+}
+
+.about-card {
+    display: flex;
+    gap: 60px;
+    align-items: center;
+}
+
+.about-img {
+    flex: 1;
+    border-radius: 30px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+}
+
+.about-img img {
+    width: 100%;
+    display: block;
+}
+
+.about-info {
+    flex: 1.2;
+}
+
+.about-info h3 {
+    font-size: 2.5rem;
+    margin-bottom: 25px;
+    color: var(--text-main);
+}
+
+.about-info p {
+    color: var(--text-muted);
+    font-size: 1.15rem;
+    margin-bottom: 30px;
+    line-height: 1.8;
+}
+
+/* 報名詳情頁專屬修正 */
+.details-hero {
+    height: 400px;
+    background: var(--hero-overlay);
+    position: relative;
+    margin-top: 80px;
+}
+
+.reg-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    padding: 40px;
+    border-radius: 30px;
+    box-shadow: 0 30px 60px rgba(74, 55, 40, 0.08);
+}
+
+input, textarea {
+    background: #f9f7f4 !important;
+    border: 1px solid #e5e0d8 !important;
+    color: var(--text-main) !important;
+}
+
+/* 頁腳 */
+footer {
+    padding: 80px 0 40px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    border-top: 1px solid var(--border);
+}
+
+@media (max-width: 768px) {
+    .hero h1 { font-size: 3rem; }
+    .about-card { flex-direction: column; gap: 40px; }
+    .nav-links { display: none; }
+}
