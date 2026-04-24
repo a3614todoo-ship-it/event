@@ -136,6 +136,9 @@ function renderUI() {
         const lines = text.split('\n');
         let html = '';
         
+        // 智慧檢查：如果整個區塊都沒出現項目符號 (1. ● -)，則視為單一的「固定欄位值」
+        const hasListItems = lines.some(line => line.trim().match(/^(\d+[、\.]|[●■◆★-]\s*)(.+)$/));
+        
         lines.forEach(line => {
             const trimmed = line.trim();
             if (!trimmed) {
@@ -147,11 +150,17 @@ function renderUI() {
             const listItemMatch = trimmed.match(/^(\d+[、\.]|[●■◆★-]\s*)(.+)$/);
             
             if (listItemMatch) {
-                // 標題行：加粗、加大、加上左側飾條與上方間距
+                // 標題行：永遠加粗、加大
                 html += `<div style="font-weight: 700; color: var(--text-main); margin-top: 20px; margin-bottom: 6px; font-size: 1.05rem; border-left: 3px solid var(--accent); padding-left: 10px; line-height: 1.4;">${trimmed}</div>`;
             } else {
-                // 一般內文：使用深色粗體，提升重要資訊的呈現效果
-                html += `<div style="color: var(--text-main); font-weight: 700; margin-bottom: 8px; line-height: 1.8; padding-left: 13px;">${trimmed}</div>`;
+                // 一般內文判斷：
+                // 1. 若該區塊有標題(hasListItems)，則內文使用一般字重 (400) 與柔和顏色
+                // 2. 若該區塊無標題，則視為固定欄位資訊，使用深色粗體 (700)
+                const isFieldVal = !hasListItems;
+                const color = isFieldVal ? 'var(--text-main)' : 'var(--text-muted)';
+                const weight = isFieldVal ? '700' : '400';
+                
+                html += `<div style="color: ${color}; font-weight: ${weight}; margin-bottom: 8px; line-height: 1.8; padding-left: 13px;">${trimmed}</div>`;
             }
         });
         
