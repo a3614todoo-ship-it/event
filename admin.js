@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', () => {
         isAdminLoggedIn = false;
         localStorage.removeItem('isStandaloneEventAdmin');
-        setView();
+        location.href = 'index.html';
     });
 
     // 頁籤切換
