@@ -26,6 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let db = null;
     let events = [];
     let eventRegistrations = [];
+    
+    // 圖表實例
+    let trendChart = null;
+    let popularChart = null;
 
     try {
         firebase.initializeApp(firebaseConfig);
@@ -507,20 +511,142 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // 儀表板與 Analytics
     // ==========================================
-    function renderAnalytics() {
-        if (!eventRegistrations) return;
-        const totalReg = eventRegistrations.length;
-        const checkedIn = eventRegistrations.filter(r => r.status === 'checked-in').length;
-        const waiting = eventRegistrations.filter(r => r.status === 'waiting').length;
-        const checkInRate = totalReg > 0 ? Math.round((checkedIn / (totalReg - waiting)) * 100) : 0;
+    function initCharts() {
+        const trendCtx = document.getElementById('registrationTrendChart');
+        const popularCtx = document.getElementById('popularEventsChart');
+        if (!trendCtx || !popularCtx) return;
 
+        trendChart = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: '報名人數',
+                    data: [],
+                    borderColor: '#d97706',
+                    backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+
+        popularChart = new Chart(popularCtx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: '累計報名',
+                    data: [],
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    }
+
+    function renderAnalytics() {
+        if (!eventRegistrations || !events) return;
+        const totalReg = eventRegistrations.length;
+        const activeRegs = eventRegistrations.filter(r => r.status !== 'cancelled');
+        const checkedIn = activeRegs.filter(r => r.status === 'checked-in').length;
+        const waiting = activeRegs.filter(r => r.status === 'waiting').length;
+        const checkInRate = activeRegs.length > 0 ? Math.round((checkedIn / activeRegs.length) * 100) : 0;
+
+        // 更新舊版卡片
         const totalEl = document.getElementById('statTotalReg');
         const rateEl = document.getElementById('statCheckinRate');
         const waitEl = document.getElementById('statWaitingCount');
-        
-        if(totalEl) totalEl.textContent = totalReg;
+        if(totalEl) totalEl.textContent = activeRegs.length;
         if(rateEl) rateEl.textContent = checkInRate + '%';
         if(waitEl) waitEl.textContent = waiting;
+
+        // 更新新版卡片 (v2)
+        const totalV2 = document.getElementById('statTotalReg-v2');
+        const checkV2 = document.getElementById('statCheckedIn-v2');
+        const waitV2 = document.getElementById('statWaitingCount-v2');
+        const rateV2 = document.getElementById('statCheckinRate-v2');
+        if(totalV2) totalV2.textContent = activeRegs.length;
+        if(checkV2) checkV2.textContent = checkedIn;
+        if(waitV2) waitV2.textContent = waiting;
+        if(rateV2) rateV2.textContent = checkInRate + '%';
+
+        // 1. 近 7 日報名趨勢
+        updateTrendChart();
+
+        // 2. 熱門活動排行
+        updatePopularChart();
+
+        // 3. 活動報到率排行表格
+        updateRankingTable();
+    }
+
+    function updateTrendChart() {
+        if (!trendChart) return;
+        const last7Days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            last7Days.push(d.toISOString().split('T')[0]);
+        }
+
+        const counts = last7Days.map(dateStr => {
+            return eventRegistrations.filter(r => r.timestamp.startsWith(dateStr)).length;
+        });
+
+        trendChart.data.labels = last7Days.map(d => d.split('-').slice(1).join('/'));
+        trendChart.data.datasets[0].data = counts;
+        trendChart.update();
+    }
+
+    function updatePopularChart() {
+        if (!popularChart) return;
+        const eventStats = events.map(e => {
+            const count = eventRegistrations.filter(r => r.eventId === e.id && r.status !== 'cancelled').length;
+            return { name: e.name, count: count };
+        });
+
+        eventStats.sort((a, b) => b.count - a.count);
+        const top5 = eventStats.slice(0, 5);
+
+        popularChart.data.labels = top5.map(s => s.name.length > 10 ? s.name.substring(0, 10) + '...' : s.name);
+        popularChart.data.datasets[0].data = top5.map(s => s.count);
+        popularChart.update();
+    }
+
+    function updateRankingTable() {
+        const tbody = document.getElementById('rankingTableBody');
+        if (!tbody) return;
+
+        const rankings = events.map(e => {
+            const regCount = eventRegistrations.filter(r => r.eventId === e.id && r.status !== 'cancelled').length;
+            const checkedInCount = eventRegistrations.filter(r => r.eventId === e.id && r.status === 'checked-in').length;
+            const rate = regCount > 0 ? Math.round((checkedInCount / regCount) * 100) : 0;
+            return { name: e.name, rate: rate, detail: `${checkedInCount} / ${e.capacity}` };
+        });
+
+        rankings.sort((a, b) => b.rate - a.rate);
+
+        tbody.innerHTML = rankings.map((r, i) => `
+            <tr>
+                <td><span class="rank-badge ${i < 3 ? 'rank-' + (i + 1) : ''}">${i + 1}</span></td>
+                <td style="font-weight: 500;">${r.name}</td>
+                <td><strong style="color: ${r.rate > 70 ? '#10b981' : (r.rate > 30 ? '#f59e0b' : '#ef4444')}">${r.rate}%</strong></td>
+                <td style="color: var(--text-muted); font-size: 0.9rem;">${r.detail}</td>
+            </tr>
+        `).join('');
     }
 
     // ==========================================
@@ -605,5 +731,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 初始化畫面
+    initCharts();
     setView();
 });

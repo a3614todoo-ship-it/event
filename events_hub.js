@@ -63,41 +63,81 @@ function renderEvents(eventsToRender) {
     const grid = document.getElementById('eventGrid');
     if (!grid) return;
 
-    if (eventsToRender.length === 0) {
+    const activeEvents = eventsToRender.filter(e => e.isActive !== false);
+
+    // 處理熱門活動 (僅在非搜尋狀態下顯示)
+    const isSearching = document.getElementById('eventSearch')?.value.trim().length > 0;
+    if (!isSearching) {
+        renderPopularEvents(activeEvents);
+    } else {
+        const popSection = document.getElementById('popularEventsSection');
+        if (popSection) popSection.style.display = 'none';
+    }
+
+    if (activeEvents.length === 0) {
         grid.innerHTML = '<div class="empty-state"><p>目前暫無公開活動，敬請期待！</p></div>';
         return;
     }
 
-    const activeEvents = eventsToRender.filter(e => e.isActive !== false);
+    grid.innerHTML = activeEvents.map(e => generateEventCardHTML(e)).join('');
+}
 
-    grid.innerHTML = activeEvents.map(e => {
+// 渲染熱門活動特選
+function renderPopularEvents(activeEvents) {
+    const popSection = document.getElementById('popularEventsSection');
+    const popGrid = document.getElementById('popularEventsGrid');
+    if (!popSection || !popGrid) return;
+
+    // 計算熱度：以報名人數排序，取前 3 名
+    const eventStats = activeEvents.map(e => {
         const regCount = allRegistrations.filter(r => r.eventId === e.id && r.status !== 'cancelled').length;
-        const capacity = parseInt(e.capacity) || 0;
-        const isFull = regCount >= capacity && capacity > 0;
-        
-        return `
-        <div class="event-card" onclick="location.href='details.html?id=${e.id}'">
-            <div class="event-img-wrapper">
-                <img src="${e.image || 'assets/hero_events_bg.png'}" class="event-img" alt="${e.name}">
-                ${isFull ? (e.allowWaitlist !== false 
-                    ? '<div class="event-badge" style="background: #d97706; color: #fff; border: none;">候補登記中</div>' 
-                    : '<div class="event-badge">已額滿</div>') 
-                : ''}
-            </div>
-            <div class="event-info">
-                <h3>${e.name}</h3>
-                <ul class="event-meta">
-                    <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;"><i class="far fa-calendar-alt"></i> ${e.date}</li>
-                    <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;"><i class="far fa-clock"></i> ${e.time}</li>
-                    <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;"><i class="fas fa-map-marker-alt"></i> ${e.location}</li>
-                    <li style="margin-top:15px; color:var(--accent); font-weight:bold; display: flex; align-items: center; gap: 10px;">
-                        <i class="fas fa-users"></i> 已報名 ${regCount} / ${capacity} 人
-                    </li>
-                </ul>
-            </div>
+        return { ...e, regCount };
+    });
+
+    // 只選取報名人數 > 0 且排名前三的活動
+    const popularOnes = eventStats
+        .filter(e => e.regCount > 0)
+        .sort((a, b) => b.regCount - a.regCount)
+        .slice(0, 3);
+
+    if (popularOnes.length > 0) {
+        popSection.style.display = 'block';
+        popGrid.innerHTML = popularOnes.map(e => generateEventCardHTML(e, true)).join('');
+    } else {
+        popSection.style.display = 'none';
+    }
+}
+
+// 生成活動卡片 HTML
+function generateEventCardHTML(e, isPopular = false) {
+    const regCount = allRegistrations.filter(r => r.eventId === e.id && r.status !== 'cancelled').length;
+    const capacity = parseInt(e.capacity) || 0;
+    const isFull = regCount >= capacity && capacity > 0;
+    const popularBadge = isPopular ? '<div class="popular-tag"><i class="fas fa-fire"></i> 熱門</div>' : '';
+
+    return `
+    <div class="event-card ${isPopular ? 'popular-card' : ''}" onclick="location.href='details.html?id=${e.id}'">
+        <div class="event-img-wrapper">
+            <img src="${e.image || 'assets/hero_events_bg.png'}" class="event-img" alt="${e.name}">
+            ${popularBadge}
+            ${isFull ? (e.allowWaitlist !== false 
+                ? '<div class="event-badge" style="background: #d97706; color: #fff; border: none;">候補登記中</div>' 
+                : '<div class="event-badge">已額滿</div>') 
+            : ''}
         </div>
-        `;
-    }).join('');
+        <div class="event-info">
+            <h3 style="${isPopular ? 'font-size: 1.5rem;' : ''}">${e.name}</h3>
+            <ul class="event-meta">
+                <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;"><i class="far fa-calendar-alt"></i> ${e.date}</li>
+                <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;"><i class="far fa-clock"></i> ${e.time}</li>
+                <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;"><i class="fas fa-map-marker-alt"></i> ${e.location}</li>
+                <li style="margin-top:15px; color:var(--accent); font-weight:bold; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-users"></i> 已報名 ${regCount} / ${capacity} 人
+                </li>
+            </ul>
+        </div>
+    </div>
+    `;
 }
 
 // 搜尋功能

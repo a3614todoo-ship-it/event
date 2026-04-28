@@ -383,3 +383,36 @@ footer {
     
     .nav-links { display: none; }
 }
+
+/* 熱門活動特選樣式 */
+.popular-card {
+    border: 2px solid rgba(217, 119, 6, 0.3);
+    box-shadow: 0 15px 35px rgba(217, 119, 6, 0.08);
+    background: linear-gradient(to bottom, #ffffff, #fffdfa);
+}
+
+.popular-tag {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: #ef4444;
+    color: white;
+    padding: 6px 15px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    z-index: 5;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    animation: pulse-fire 2s infinite;
+}
+
+@keyframes pulse-fire {
+    0% { transform: scale(1); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+    50% { transform: scale(1.05); box-shadow: 0 4px 20px rgba(239, 68, 68, 0.5); }
+    100% { transform: scale(1); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+}
+
+.popular-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 25px 50px rgba(217, 119, 6, 0.15);
+}

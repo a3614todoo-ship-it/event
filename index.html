@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,11 +8,14 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts: 襯線體更符合藝術氣息 -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@300;400;700&display=swap"
+        rel="stylesheet">
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 </head>
+
 <body>
     <!-- 導航列 -->
     <nav class="navbar">
@@ -22,7 +26,9 @@
                     <li><a href="#" class="active">當期活動</a></li>
                     <li><a href="#about">關於我們</a></li>
                 </ul>
-                <a href="admin.html" id="adminQuickLink" style="display: none; background: var(--accent); color: white; text-decoration: none; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; transition: 0.3s;"><i class="fas fa-cog"></i> 進入後台</a>
+                <a href="admin.html" id="adminQuickLink"
+                    style="display: none; background: var(--accent); color: white; text-decoration: none; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; transition: 0.3s;"><i
+                        class="fas fa-cog"></i> 進入後台</a>
             </div>
         </div>
     </nav>
@@ -35,6 +41,18 @@
             <p>從大師講座到專業工作坊，為您的藝術之路注入靈魂。</p>
         </div>
     </header>
+
+    <!-- 熱門活動區塊 -->
+    <section id="popularEventsSection" class="container" style="display: none; margin-top: 50px;">
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 30px;">
+            <h2 style="font-family: 'Noto Serif TC', serif; font-size: 2rem; margin: 0;">熱門活動特選</h2>
+            <span style="background: #ef4444; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; letter-spacing: 1px;"><i class="fas fa-fire"></i> TRENDING</span>
+        </div>
+        <div id="popularEventsGrid" class="event-grid" style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); margin-bottom: 60px;">
+            <!-- 動態注入熱門活動 -->
+        </div>
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin-bottom: 50px;">
+    </section>
 
     <!-- 搜尋區塊 -->
     <section class="search-container">
@@ -63,9 +81,11 @@
                     <img src="assets/about_bg.png" alt="關於藝境">
                 </div>
                 <div class="about-info">
-                    <h3 style="font-size: 2.2rem; line-height: 1.4;">藝境空間｜<br><span style="font-weight: 300;">為創作而存在的活動報名系統</span></h3>
+                    <h3 style="font-size: 2.2rem; line-height: 1.4;">藝境空間｜<br><span
+                            style="font-weight: 300;">為創作而存在的活動報名系統</span></h3>
                     <p style="margin-top: 20px;">創作者的時間，應該留給靈感，而不是行政。</p>
-                    <p style="font-weight: 700; color: var(--text-main); margin-top: 30px; font-size: 1.3rem;">這套活動報名系統的存在，只為一件事——<br>讓藝術家專心創作，其餘交給系統。</p>
+                    <p style="font-weight: 700; color: var(--text-main); margin-top: 30px; font-size: 1.3rem;">
+                        這套活動報名系統的存在，只為一件事——<br>讓藝術家專心創作，其餘交給系統。</p>
                 </div>
             </div>
         </div>
@@ -80,7 +100,9 @@
                 <a href="#" style="color: var(--text-muted);"><i class="fab fa-facebook"></i></a>
                 <a href="#" style="color: var(--text-muted);"><i class="fab fa-instagram"></i></a>
                 <a href="#" style="color: var(--text-muted);"><i class="fas fa-envelope"></i></a>
-                <a href="admin.html" style="color: var(--text-muted); font-size: 0.9rem; align-self: flex-end; margin-left: 20px; text-decoration: none;"><i class="fas fa-cog"></i> 管理員登入</a>
+                <a href="admin.html"
+                    style="color: var(--text-muted); font-size: 0.9rem; align-self: flex-end; margin-left: 20px; text-decoration: none;"><i
+                        class="fas fa-cog"></i> 管理員登入</a>
             </div>
         </div>
     </footer>
@@ -93,4 +115,5 @@
         });
     </script>
 </body>
+
 </html>
