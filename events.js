@@ -188,11 +188,21 @@ function renderUI() {
     const imgEl = document.getElementById('eventImage');
     if (imgEl) {
         const imageUrl = currentEvent.image || 'assets/hero_events_bg.png';
-        imgEl.src = imageUrl;
+        
+        // 必須在設定 src 之前先綁定監聽器
         imgEl.onload = () => {
             imgEl.style.opacity = '1';
         };
-        // 處理快取情況：如果圖片已經載入過，onload 可能不會觸發
+        
+        imgEl.onerror = () => {
+            console.warn("圖片載入失敗，顯示預設圖");
+            imgEl.src = 'assets/hero_events_bg.png';
+            imgEl.style.opacity = '1';
+        };
+
+        imgEl.src = imageUrl;
+
+        // 處理快取情況
         if (imgEl.complete) {
             imgEl.style.opacity = '1';
         }
