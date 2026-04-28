@@ -186,8 +186,16 @@ function renderUI() {
     }
     
     const imgEl = document.getElementById('eventImage');
-    if (currentEvent.image) {
-        imgEl.src = currentEvent.image;
+    if (imgEl) {
+        const imageUrl = currentEvent.image || 'assets/hero_events_bg.png';
+        imgEl.src = imageUrl;
+        imgEl.onload = () => {
+            imgEl.style.opacity = '1';
+        };
+        // 處理快取情況：如果圖片已經載入過，onload 可能不會觸發
+        if (imgEl.complete) {
+            imgEl.style.opacity = '1';
+        }
     }
     // 渲染自訂表單欄位
     const dynamicFieldsContainer = document.getElementById('dynamicFieldsContainer');
