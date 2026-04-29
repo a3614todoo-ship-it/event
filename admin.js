@@ -288,8 +288,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <tr style="${e.isActive ? '' : 'opacity: 0.6;'}">
                 <td><strong><a href="details.html?id=${e.id}" target="_blank" style="color: var(--text-main); text-decoration: none; transition: color 0.3s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-main)'">${e.name} <i class="fas fa-external-link-alt" style="font-size: 0.8rem; margin-left: 5px; color: var(--text-muted);"></i></a></strong></td>
                 <td>${e.date} ${e.time}</td>
-                <td>${e.location}</td>
                 <td>${regCount} / ${e.capacity} ${fullStr}</td>
+                <td><i class="far fa-eye"></i> ${e.views || 0}</td>
                 <td>${e.isActive ? '<span style="color:#10b981;">開放中</span>' : '<span style="color:#9ca3af;">已隱藏</span>'}</td>
                 <td>
                     <button class="btn-primary" style="padding: 5px 10px; font-size: 0.85rem; margin-right: 5px;" onclick="editEvent('${e.id}')">編輯</button>
@@ -633,16 +633,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const rankings = events.map(e => {
             const regCount = eventRegistrations.filter(r => r.eventId === e.id && r.status !== 'cancelled').length;
             const checkedInCount = eventRegistrations.filter(r => r.eventId === e.id && r.status === 'checked-in').length;
-            const rate = regCount > 0 ? Math.round((checkedInCount / regCount) * 100) : 0;
-            return { name: e.name, rate: rate, detail: `${checkedInCount} / ${e.capacity}` };
+            const views = e.views || 0;
+            const checkinRate = regCount > 0 ? Math.round((checkedInCount / regCount) * 100) : 0;
+            const conversionRate = views > 0 ? Math.round((regCount / views) * 100) : 0;
+            
+            return { 
+                name: e.name, 
+                views: views,
+                conversionRate: conversionRate,
+                rate: checkinRate, 
+                detail: `${checkedInCount} / ${e.capacity}` 
+            };
         });
 
-        rankings.sort((a, b) => b.rate - a.rate);
+        rankings.sort((a, b) => b.views - a.views); // 預設依點擊數排序
 
         tbody.innerHTML = rankings.map((r, i) => `
             <tr>
                 <td><span class="rank-badge ${i < 3 ? 'rank-' + (i + 1) : ''}">${i + 1}</span></td>
                 <td style="font-weight: 500;">${r.name}</td>
+                <td><i class="far fa-eye" style="color: #6366f1;"></i> ${r.views}</td>
+                <td><strong style="color: #8b5cf6;">${r.conversionRate}%</strong></td>
                 <td><strong style="color: ${r.rate > 70 ? '#10b981' : (r.rate > 30 ? '#f59e0b' : '#ef4444')}">${r.rate}%</strong></td>
                 <td style="color: var(--text-muted); font-size: 0.9rem;">${r.detail}</td>
             </tr>
