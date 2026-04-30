@@ -922,6 +922,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p style="margin: 5px 0 0 0; font-size: 12px; color: #8d7a6b;">(若無法開啟，憑手機末三碼亦可報到)</p>
                     </div>
 
+                    <!-- 報到須知區塊 -->
+                    <div style="border: 1px solid #e5e0d8; border-radius: 12px; padding: 20px; background-color: #ffffff; margin-bottom: 25px;">
+                        <h4 style="margin: 0 0 12px 0; font-size: 15px; color: ${textMain};">📍 報到須知</h4>
+                        <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #6b5a4d; line-height: 1.8;">
+                            <li style="margin-bottom: 5px;">活動當天請<strong>預先開啟並準備好此 QR Code</strong>，或憑「報名姓名」及「手機末三碼」報到即可。</li>
+                            <li style="margin-bottom: 5px;">建議您提早於活動開始前 <strong>10 分鐘</strong> 抵達現場。</li>
+                            <li>為了維護活動品質，活動開始 15 分鐘後將停止報到。</li>
+                        </ul>
+                    </div>
+
                     <div style="text-align: center; border-top: 1px solid #f1ece4; padding-top: 30px; margin-top: 20px;">
                         <h4 style="margin: 0; font-size: 18px; color: ${textMain};">期待您的光臨！</h4>
                         <p style="margin: 10px 0 0 0; font-size: 13px; color: #bcae9e;">藝境空間 管理團隊 敬上</p>
@@ -1303,6 +1313,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         <img src="https://quickchart.io/chart?cht=qr&chs=180x180&chl=${regData.id}&choe=UTF-8" width="180" height="180" alt="QR Code" style="display: block; margin: 0 auto;">
                         <p style="margin: 15px 0 0 0; font-size: 14px; color: #4a3728;">請於抵達現場時<strong>預先開啟此 QR Code</strong></p>
                         <p style="margin: 5px 0 0 0; font-size: 12px; color: #8d7a6b;">(若無法開啟，憑手機末三碼亦可報到)</p>
+                    </div>
+
+                    <!-- 報到須知區塊 -->
+                    <div style="border: 1px solid #e5e0d8; border-radius: 12px; padding: 20px; background-color: #ffffff; margin-bottom: 25px;">
+                        <h4 style="margin: 0 0 12px 0; font-size: 15px; color: ${textMain};">📍 報到須知</h4>
+                        <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #6b5a4d; line-height: 1.8;">
+                            <li style="margin-bottom: 5px;">活動當天請<strong>預先開啟並準備好此 QR Code</strong>，或憑「報名姓名」及「手機末三碼」報到即可。</li>
+                            <li style="margin-bottom: 5px;">建議您提早於活動開始前 <strong>10 分鐘</strong> 抵達現場。</li>
+                            <li>為了維護活動品質，活動開始 15 分鐘後將停止報到。</li>
+                        </ul>
                     </div>
 
                     <div style="background-color: #fdfaf5; border: 1px solid rgba(217, 119, 6, 0.1); border-radius: 16px; padding: 25px; margin-bottom: 30px;">
