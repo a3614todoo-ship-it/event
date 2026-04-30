@@ -690,6 +690,136 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
+    // 發送滿意度問卷
+    // ==========================================
+    const sendSurveysBtn = document.getElementById('sendSurveysBtn');
+    if (sendSurveysBtn) {
+        sendSurveysBtn.addEventListener('click', async () => {
+            const selectedId = checkinSelect.value;
+            if (!selectedId) { alert('請先選擇活動'); return; }
+
+            const ev = events.find(e => e.id === selectedId);
+            // 只發送給「已報到」的參加者
+            const list = eventRegistrations.filter(r => r.eventId === selectedId && r.status === 'checked-in');
+
+            if (list.length === 0) {
+                alert('目前沒有已報到的參加者，無法發送問卷。');
+                return;
+            }
+
+            if (!confirm(`確定要對這 ${list.length} 位「已報到」的參加者發送滿意度問卷嗎？`)) return;
+
+            sendSurveysBtn.disabled = true;
+            let successCount = 0;
+
+            for (let i = 0; i < list.length; i++) {
+                const reg = list[i];
+                sendSurveysBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> 發送中 (${i + 1}/${list.length})`;
+                try {
+                    await sendSurveyEmail(reg, ev);
+                    successCount++;
+                } catch (err) {
+                    console.error(`問卷發送失敗 (${reg.userName}):`, err);
+                }
+                await new Promise(resolve => setTimeout(resolve, 800));
+            }
+
+            alert(`問卷發送完成！\n成功：${successCount} 封`);
+            sendSurveysBtn.disabled = false;
+            sendSurveysBtn.innerHTML = '<i class="fas fa-poll-h"></i> 發送問卷';
+        });
+    }
+
+    async function sendSurveyEmail(regData, eventData) {
+        const emailHtml = `
+        <div style="background-color: #fdfbf7; padding: 40px; font-family: sans-serif; border: 1px solid #e5e0d8; border-radius: 20px; text-align: center;">
+            <h2 style="color: #d97706;">感謝您的參與！</h2>
+            <p style="font-size: 16px; color: #4a3728;">親愛的 <strong>${regData.userName}</strong> 您好，</p>
+            <p>感謝您參加活動《<strong>${eventData.name}</strong>》，希望能為您帶來一段美好的藝術時光。</p>
+            <p>為了讓我們做得更好，誠摯邀請您填寫一份簡單的滿意度問卷：</p>
+            <div style="margin: 30px 0;">
+                <a href="https://a3614todoo-ship-it.github.io/event/survey.html?id=${regData.id}" 
+                   style="display: inline-block; padding: 15px 35px; background: #4a3728; color: white; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px;">
+                   填寫問卷回饋
+                </a>
+            </div>
+            <p style="color: #8d7a6b; font-size: 14px;">(填寫時間約只需 1 分鐘，您的建議對我們非常重要)</p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
+            <p style="font-size: 13px; color: #bcae9e;">藝境空間 管理團隊 敬上</p>
+        </div>`;
+
+        return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+            to_email: regData.userEmail,
+            to_name: regData.userName,
+            subject: `【活動回饋】期待聽到您對《${eventData.name}》的看法`,
+            message_html: emailHtml
+        });
+    }
+
+    // ==========================================
+    // 匯出問卷結果
+    // ==========================================
+    const exportSurveysBtn = document.getElementById('exportSurveysBtn');
+    if (exportSurveysBtn) {
+        exportSurveysBtn.addEventListener('click', async () => {
+            const selectedId = checkinSelect.value;
+            if (!selectedId) { alert('請先選擇活動'); return; }
+
+            exportSurveysBtn.disabled = true;
+            exportSurveysBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 讀取中...';
+
+            try {
+                const snapshot = await db.collection('event_surveys')
+                    .where('eventId', '==', selectedId)
+                    .orderBy('submittedAt', 'desc')
+                    .get();
+
+                if (snapshot.empty) {
+                    alert('目前尚無該活動的問卷回饋。');
+                    exportSurveysBtn.disabled = false;
+                    exportSurveysBtn.innerHTML = '<i class="fas fa-file-export"></i> 匯出問卷';
+                    return;
+                }
+
+                const data = [];
+                snapshot.forEach(doc => data.push(doc.data()));
+
+                // 轉換為 CSV
+                const header = ["填寫時間", "姓名", "Email", "滿意度評分", "最喜歡的部分", "建議與留言", "推薦意願"];
+                const rows = data.map(s => [
+                    s.submittedAt,
+                    s.userName,
+                    s.userEmail,
+                    s.rating,
+                    `"${s.favoritePart.replace(/"/g, '""')}"`,
+                    `"${s.suggestions.replace(/"/g, '""')}"`,
+                    s.recommend === 'yes' ? '願意' : '考慮中'
+                ]);
+
+                let csvContent = "\uFEFF" + header.join(",") + "\n" + rows.map(r => r.join(",")).join("\n");
+                
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", `問卷回饋_${data[0].eventName}_${new Date().toLocaleDateString()}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                alert(`成功匯出 ${data.length} 份問卷結果！`);
+            } catch (err) {
+                console.error("匯出問卷失敗:", err);
+                alert("匯出失敗，請檢查權限或稍後再試。");
+            }
+
+            exportSurveysBtn.disabled = false;
+            exportSurveysBtn.innerHTML = '<i class="fas fa-file-export"></i> 匯出問卷';
+        });
+    }
+
+    // ==========================================
     // 匯出名冊
     // ==========================================
     const exportCheckinCsvBtn = document.getElementById('exportCheckinCsvBtn');
