@@ -145,11 +145,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const target = btn.getAttribute('data-tab');
             adminTabs.forEach(b => {
-                b.classList.remove('active', 'btn-primary');
-                b.classList.add('btn-secondary');
+                b.classList.remove('active');
             });
-            btn.classList.add('active', 'btn-primary');
-            btn.classList.remove('btn-secondary');
+            btn.classList.add('active');
             tabContents.forEach(tc => tc.classList.remove('active'));
             document.getElementById(target).classList.add('active');
         });
@@ -537,7 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="btn-action-survey" onclick="openSurveyDesign('${e.id}')" title="設計問卷">
                             <i class="fas fa-poll-h"></i> 問卷
                         </button>
-                        <button class="btn-action-results" onclick="openSurveyResults('${e.id}')" title="問卷統計結果" style="background: #f5f3ff; color: #7c3aed; border-color: #ede9fe;">
+                        <button class="btn-action-results" onclick="openSurveyResults('${e.id}')" title="問卷統計結果">
                             <i class="fas fa-chart-pie"></i> 結果
                         </button>
                         <button class="btn-action-delete" onclick="deleteEvent('${e.id}')" title="刪除活動">

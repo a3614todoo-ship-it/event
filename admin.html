@@ -292,94 +292,84 @@
                     <textarea id="editEventDesc" rows="4" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);"></textarea>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label>活動詳細資訊補充 (最多 5 項，例如名稱填「主辦單位」，內容填「藝境空間」)</label>
-                    <div style="background: rgba(0,0,0,0.02); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
-                        <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start;">
-                            <input type="text" id="extName1" placeholder="欄位名稱 1" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);">
-                            <textarea id="extVal1" placeholder="欄位內容 1 (支援多行文字)" rows="2" style="flex: 2; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); resize: vertical;"></textarea>
+                <!-- 頁面擴充資訊 -->
+                <div style="margin-top: 20px; background: rgba(0,0,0,0.02); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+                    <label style="font-weight: bold; display: block; margin-bottom: 10px; color: var(--text-muted);">頁面擴充資訊 (選填)</label>
+                    <div id="extDetailsContainer">
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <input type="text" id="extName1" placeholder="欄位名稱" style="flex: 1;">
+                            <input type="text" id="extVal1" placeholder="內容" style="flex: 2;">
                         </div>
-                        <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start;">
-                            <input type="text" id="extName2" placeholder="欄位名稱 2" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);">
-                            <textarea id="extVal2" placeholder="欄位內容 2 (支援多行文字)" rows="2" style="flex: 2; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); resize: vertical;"></textarea>
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <input type="text" id="extName2" placeholder="欄位名稱" style="flex: 1;">
+                            <input type="text" id="extVal2" placeholder="內容" style="flex: 2;">
                         </div>
-                        <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start;">
-                            <input type="text" id="extName3" placeholder="欄位名稱 3" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);">
-                            <textarea id="extVal3" placeholder="欄位內容 3 (支援多行文字)" rows="2" style="flex: 2; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); resize: vertical;"></textarea>
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <input type="text" id="extName3" placeholder="欄位名稱" style="flex: 1;">
+                            <input type="text" id="extVal3" placeholder="內容" style="flex: 2;">
                         </div>
-                        <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start;">
-                            <input type="text" id="extName4" placeholder="欄位名稱 4" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);">
-                            <textarea id="extVal4" placeholder="欄位內容 4 (支援多行文字)" rows="2" style="flex: 2; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); resize: vertical;"></textarea>
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <input type="text" id="extName4" placeholder="欄位名稱" style="flex: 1;">
+                            <input type="text" id="extVal4" placeholder="內容" style="flex: 2;">
                         </div>
-                        <div style="display: flex; gap: 10px; align-items: flex-start;">
-                            <input type="text" id="extName5" placeholder="欄位名稱 5" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);">
-                            <textarea id="extVal5" placeholder="欄位內容 5 (支援多行文字)" rows="2" style="flex: 2; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); resize: vertical;"></textarea>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="extName5" placeholder="欄位名稱" style="flex: 1;">
+                            <input type="text" id="extVal5" placeholder="內容" style="flex: 2;">
                         </div>
                     </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label>封面圖片路徑 (請將圖片放入 assets 資料夾，例如: assets/event_cover.jpg) (可選)</label>
-                    <input type="text" id="editEventImage" placeholder="assets/您的圖片檔名.jpg" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>封面圖片路徑</label>
+                    <input type="text" id="editEventImage">
                 </div>
 
-                <div class="form-group" style="margin-bottom: 20px;">
-                    <label style="display: flex; align-items: center; cursor: pointer; font-weight: 500; margin-bottom: 10px;">
-                        <input type="checkbox" id="editEventIsActive" checked style="margin-right: 10px; width: 18px; height: 18px;">
-                        上架發佈至前台 (若取消勾選，前台將不會顯示)
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer; font-weight: 500; margin-bottom: 10px;">
-                        <input type="checkbox" id="editEventAllowWaitlist" checked style="margin-right: 10px; width: 18px; height: 18px;">
-                        開放候補登記 (額滿時改為候補登記)
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer; font-weight: 500;">
-                        <input type="checkbox" id="editEventAutoPromote" checked style="margin-right: 10px; width: 18px; height: 18px;">
-                        啟用自動遞補 (有人取消時自動由候補遞補)
-                    </label>
+                <div style="display: flex; gap: 15px; margin-top: 20px; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox" id="editEventIsActive" checked> 上架發佈</label>
+                    <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox" id="editEventAllowWaitlist" checked> 開放候補</label>
+                    <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox" id="editEventAutoPromote" checked> 自動遞補</label>
                 </div>
 
-                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
+                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 25px 0;">
 
-                <div class="form-group" style="margin-bottom: 20px;">
+                <div class="form-group">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <label><i class="fas fa-list-ul"></i> 自訂報名表單欄位</label>
-                        <button type="button" id="addCustomFieldBtn" class="btn-secondary" style="padding: 5px 10px; font-size: 0.85rem;"><i class="fas fa-plus"></i> 新增欄位</button>
+                        <label>自訂報名表單欄位</label>
+                        <button type="button" id="addCustomFieldBtn" class="btn-secondary" style="padding: 5px 12px; font-size: 0.85rem;">新增欄位</button>
                     </div>
                     <div id="customFieldsContainer"></div>
                 </div>
-            </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 30px;">
-                    <button type="button" class="btn-secondary close-modal-btn">取消</button>
-                    <button type="submit" class="btn-primary">儲存活動</button>
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 35px; border-top: 1px solid var(--border-color); padding-top: 25px;">
+                    <button type="button" class="btn-secondary close-modal-btn" style="padding: 10px 25px;">取消</button>
+                    <button type="submit" class="btn-primary" style="padding: 10px 30px; background: #f97316;">儲存活動</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- 問卷設計 Modal (獨立頁面概念) -->
+    <!-- 問卷設計 Modal -->
     <div id="surveyDesignModal" class="modal">
-        <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
             <span class="close-survey-modal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
             <h2 style="font-family: 'Noto Serif TC', serif; margin-bottom: 5px;">問卷題目設計</h2>
             <p id="surveyEventName" style="color: var(--accent); font-weight: bold; margin-bottom: 25px;">活動名稱</p>
             
             <form id="surveyDesignForm">
                 <input type="hidden" id="surveyEventId">
-                
-                <div class="form-group" style="margin-bottom: 15px;">
+                <div class="form-group">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <label style="font-weight: bold;"><i class="fas fa-edit"></i> 設計您的問題</label>
-                        <button type="button" id="addSurveyFieldBtn" class="btn-primary" style="padding: 5px 15px; font-size: 0.85rem; background: var(--accent);"><i class="fas fa-plus"></i> 新增問題</button>
+                        <label style="font-weight: bold;">設計您的問題</label>
+                        <button type="button" id="addSurveyFieldBtn" class="btn-primary" style="padding: 5px 15px; font-size: 0.85rem;">新增問題</button>
                     </div>
-                    <div id="surveyFieldsContainer" style="background: rgba(0,0,0,0.02); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); max-height: 450px; overflow-y: auto;">
+                    <div id="surveyFieldsContainer" style="background: rgba(0,0,0,0.02); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px;">
                         <!-- 動態注入題目編輯器 -->
                     </div>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 30px;">
-                    <button type="button" class="btn-secondary close-survey-modal-btn">取消</button>
-                    <button type="submit" class="btn-primary" style="background: var(--text-main);">儲存問卷設定</button>
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 25px;">
+                    <button type="button" class="btn-secondary close-survey-modal-btn" style="padding: 10px 25px;">取消</button>
+                    <button type="submit" class="btn-primary" style="padding: 10px 30px;">儲存問卷設定</button>
                 </div>
             </form>
         </div>
@@ -387,7 +377,7 @@
 
     <!-- 問卷統計結果 Modal -->
     <div id="surveyResultsModal" class="modal">
-        <div class="modal-content" style="max-width: 850px;">
+        <div class="modal-content" style="max-width: 850px; max-height: 90vh; overflow-y: auto;">
             <span class="close-results-modal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
             <h2 style="font-family: 'Noto Serif TC', serif; margin-bottom: 5px;">問卷結果分析報告</h2>
             <p id="resultsEventName" style="color: var(--accent); font-weight: bold; margin-bottom: 25px;">活動名稱</p>
@@ -421,8 +411,8 @@
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; margin-top: 30px;">
-                <button type="button" class="btn-primary close-results-modal-btn" style="background: var(--text-main); padding: 10px 30px;">關閉報告</button>
+            <div style="display: flex; justify-content: flex-end; margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 25px;">
+                <button type="button" class="btn-primary close-results-modal-btn" style="padding: 10px 30px;">關閉報告</button>
             </div>
         </div>
     </div>

@@ -465,7 +465,7 @@ footer {
 }
 
 /* 後台操作按鈕樣式 */
-.btn-action-edit, .btn-action-survey, .btn-action-delete {
+.btn-action-edit, .btn-action-survey, .btn-action-results, .btn-action-delete {
     padding: 6px 14px;
     border-radius: 8px;
     font-size: 0.85rem;
@@ -492,6 +492,13 @@ footer {
     border-color: #fef3c7;
 }
 .btn-action-survey:hover { background-color: #d97706; color: white; }
+
+.btn-action-results {
+    background-color: #f5f3ff;
+    color: #7c3aed;
+    border-color: #ede9fe;
+}
+.btn-action-results:hover { background-color: #7c3aed; color: white; }
 
 .btn-action-delete {
     padding: 6px 10px;
