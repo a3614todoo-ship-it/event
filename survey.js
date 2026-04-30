@@ -35,6 +35,7 @@ async function init() {
         // 1. 檢查報名紀錄是否存在
         const regDoc = await db.collection('event_registrations').doc(regId).get();
         if (!regDoc.exists) {
+            document.getElementById('errorMsg').textContent = '找不到對應的報名紀錄，請確認連結是否正確。';
             showState('error');
             return;
         }
@@ -53,7 +54,16 @@ async function init() {
         showState('form');
 
     } catch (err) {
-        console.error(err);
+        console.error("問卷初始化錯誤:", err);
+        let errorDetail = "載入出錯，請稍後再試。";
+        
+        if (err.code === 'permission-denied') {
+            errorDetail = "資料庫權限不足，請管理員檢查 Firebase Rules 設定。";
+        } else {
+            errorDetail = "系統錯誤: " + err.message;
+        }
+        
+        document.getElementById('errorMsg').textContent = errorDetail;
         showState('error');
     }
 }
