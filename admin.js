@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 圖表實例
     let trendChart = null;
     let popularChart = null;
+    let utmSourceChart = null;
 
     try {
         firebase.initializeApp(firebaseConfig);
@@ -1132,7 +1133,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function initCharts() {
         const trendCtx = document.getElementById('registrationTrendChart');
         const popularCtx = document.getElementById('popularEventsChart');
-        if (!trendCtx || !popularCtx) return;
+        const utmCtx = document.getElementById('utmSourceChart');
+        if (!trendCtx || !popularCtx || !utmCtx) return;
 
         trendChart = new Chart(trendCtx, {
             type: 'line',
@@ -1173,6 +1175,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
             }
         });
+
+        utmSourceChart = new Chart(utmCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b', '#ec4899', '#14b8a6'
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right' }
+                }
+            }
+        });
     }
 
     function renderAnalytics() {
@@ -1209,6 +1233,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 3. 活動報到率排行表格
         updateRankingTable();
+
+        // 4. UTM 來源分析圓餅圖
+        updateUtmChart();
     }
 
     function updateTrendChart() {
@@ -1276,6 +1303,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td style="color: var(--text-muted); font-size: 0.9rem;">${r.detail}</td>
             </tr>
         `).join('');
+    }
+
+    function updateUtmChart() {
+        if (!utmSourceChart) return;
+
+        const activeRegs = eventRegistrations.filter(r => r.status !== 'cancelled');
+        const sourceMap = {};
+
+        activeRegs.forEach(r => {
+            const src = r.utmSource || 'direct';
+            // 美化顯示名稱
+            let displayName = src;
+            if (src === 'direct') displayName = '直接來源/未追蹤';
+            else if (src === 'facebook_share') displayName = 'FB 分享';
+            else if (src === 'line_share') displayName = 'LINE 分享';
+            else if (src === 'copy_link') displayName = '連結分享';
+
+            sourceMap[displayName] = (sourceMap[displayName] || 0) + 1;
+        });
+
+        const labels = Object.keys(sourceMap);
+        const data = Object.values(sourceMap);
+
+        if (labels.length === 0) {
+            utmSourceChart.data.labels = ['暫無資料'];
+            utmSourceChart.data.datasets[0].data = [1];
+            utmSourceChart.data.datasets[0].backgroundColor = ['#e2e8f0'];
+        } else {
+            utmSourceChart.data.labels = labels;
+            utmSourceChart.data.datasets[0].data = data;
+            utmSourceChart.data.datasets[0].backgroundColor = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b', '#ec4899', '#14b8a6'];
+        }
+
+        utmSourceChart.update();
     }
 
     // ==========================================

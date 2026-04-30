@@ -54,6 +54,18 @@
                         <li><i class="fas fa-users"></i> 報名狀況：<span id="regStatus">載入中</span></li>
                     </ul>
 
+                    <!-- 飢餓行銷：即將額滿提示 -->
+                    <div id="urgencyNotice" style="display: none; background: #fef2f2; color: #dc2626; padding: 10px 15px; border-radius: 8px; border: 1px dashed #f87171; margin-bottom: 15px; font-weight: bold; font-size: 0.9rem; text-align: center;">
+                        <i class="fas fa-fire"></i> <span id="urgencyText">即將額滿！最後剩餘名額</span>
+                    </div>
+
+                    <!-- 社群分享按鈕 -->
+                    <div style="display: flex; gap: 8px; margin-bottom: 25px; border-top: 1px dashed var(--border-color); padding-top: 15px;">
+                        <button onclick="shareToLine()" style="flex: 1; background: #06C755; color: white; border: none; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: opacity 0.2s;"><i class="fab fa-line"></i> LINE 分享</button>
+                        <button onclick="shareToFB()" style="flex: 1; background: #1877F2; color: white; border: none; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: opacity 0.2s;"><i class="fab fa-facebook-f"></i> FB 分享</button>
+                        <button onclick="copyEventLink()" style="flex: 1; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: background 0.2s;"><i class="fas fa-link"></i> 複製連結</button>
+                    </div>
+
                     <h3 class="form-title">觀眾報名表</h3>
                     <div id="fullNotice" class="full-notice">目前名額已滿，報名將自動進入候補名單。</div>
                     
@@ -111,6 +123,16 @@
                     <button id="btnICal" class="btn-calendar" style="flex: 1; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 12px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
                         <i class="far fa-calendar-plus" style="color: #4285f4; font-size: 18px;"></i> Apple / Outlook
                     </button>
+                </div>
+            </div>
+
+            <!-- 分享按鈕組 (報名成功專用) -->
+            <div id="shareButtons" style="margin-bottom: 25px; border-top: 1px dashed var(--border); padding-top: 20px;">
+                <p style="font-size: 0.9rem; color: var(--accent); margin-bottom: 12px; font-weight: bold;">邀請好友一起來！</p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button onclick="shareToLine()" style="flex: 1; padding: 10px; background: #06C755; border: none; border-radius: 12px; color: white; cursor: pointer; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s;"><i class="fab fa-line" style="font-size: 1.1rem;"></i> LINE</button>
+                    <button onclick="shareToFB()" style="flex: 1; padding: 10px; background: #1877F2; border: none; border-radius: 12px; color: white; cursor: pointer; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s;"><i class="fab fa-facebook-f" style="font-size: 1.1rem;"></i> FB 分享</button>
+                    <button onclick="copyEventLink()" style="flex: 1; padding: 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; color: #475569; cursor: pointer; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;"><i class="fas fa-link" style="font-size: 1rem;"></i> 連結</button>
                 </div>
             </div>
 

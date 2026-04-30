@@ -27,7 +27,13 @@ if (typeof emailjs !== 'undefined') {
 
 let currentEvent = null;
 let registrationsCount = 0;
-let eventId = new URLSearchParams(window.location.search).get('id');
+const urlParams = new URLSearchParams(window.location.search);
+let eventId = urlParams.get('id');
+
+// [行銷] UTM 來源追蹤擷取
+const utmSource = urlParams.get('utm_source') || 'direct';
+const utmMedium = urlParams.get('utm_medium') || '';
+const utmCampaign = urlParams.get('utm_campaign') || '';
 
 document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('isStandaloneEventAdmin') === 'true') {
@@ -49,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
 async function trackView() {
     if (!eventId) return;
     try {
-        // 使用原子操作增加瀏覽量
         await db.collection("events").doc(eventId).update({
             views: firebase.firestore.FieldValue.increment(1)
         });
@@ -60,7 +65,6 @@ async function trackView() {
 
 async function loadEventData() {
     try {
-        // 監聽活動資料
         db.collection("events").doc(eventId).onSnapshot((doc) => {
             if (!doc.exists) {
                 alert("活動不存在");
@@ -71,7 +75,6 @@ async function loadEventData() {
             renderUI();
         });
 
-        // 監聽報名人數
         db.collection("event_registrations").where("eventId", "==", eventId).onSnapshot((snapshot) => {
             let list = [];
             snapshot.forEach(d => list.push(d.data()));
@@ -82,18 +85,32 @@ async function loadEventData() {
             const statusEl = document.getElementById('regStatus');
             const fullNotice = document.getElementById('fullNotice');
             const submitBtn = document.getElementById('submitBtn');
+            const urgencyNotice = document.getElementById('urgencyNotice');
+            const urgencyText = document.getElementById('urgencyText');
             
             if (statusEl) {
                 statusEl.innerHTML = `<strong style="color:var(--accent); font-size:1.4rem;">${registrationsCount}</strong> / ${cap}`;
                 
+                const availableSpots = cap - registrationsCount;
+
+                // [行銷] 飢餓行銷：即將額滿提示
+                if (urgencyNotice && cap > 0) {
+                    // 若剩餘名額 <= 5 或低於 20%，且尚未額滿時顯示
+                    if (availableSpots > 0 && (availableSpots <= 5 || availableSpots <= cap * 0.2)) {
+                        urgencyNotice.style.display = 'block';
+                        urgencyText.textContent = `即將額滿！最後剩餘 ${availableSpots} 個名額`;
+                    } else {
+                        urgencyNotice.style.display = 'none';
+                    }
+                }
+
                 // 額滿檢查
                 if (registrationsCount >= cap && cap > 0) {
                     if (allowWaitlist) {
-                        // 開放候補
                         if (fullNotice) {
                             fullNotice.style.display = 'block';
                             fullNotice.textContent = '目前名額已滿，報名將自動進入候補名單。';
-                            fullNotice.style.color = '#b45309'; // 稍微加深橘色
+                            fullNotice.style.color = '#b45309'; 
                             fullNotice.style.fontWeight = '700';
                         }
                         submitBtn.textContent = '加入候補登記';
@@ -102,11 +119,10 @@ async function loadEventData() {
                         submitBtn.style.cursor = 'pointer';
                         submitBtn.style.opacity = '1';
                     } else {
-                        // 不開放候補
                         if (fullNotice) {
                             fullNotice.style.display = 'block';
                             fullNotice.textContent = '本活動報名名額已滿，暫不開放候補。';
-                            fullNotice.style.color = '#dc2626'; // 加深紅色
+                            fullNotice.style.color = '#dc2626'; 
                             fullNotice.style.fontWeight = '700';
                         }
                         submitBtn.textContent = '本活動已額滿';
@@ -116,7 +132,6 @@ async function loadEventData() {
                         submitBtn.style.opacity = '0.7';
                     }
                 } else {
-                    // 未額滿
                     if (fullNotice) fullNotice.style.display = 'none';
                     submitBtn.textContent = '確認報名';
                     submitBtn.disabled = false;
@@ -318,7 +333,10 @@ function setupForm() {
             userPhone: phone,
             userEmail: email,
             status: isWaitlist ? 'waiting' : 'registered',
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            utmSource: utmSource,
+            utmMedium: utmMedium,
+            utmCampaign: utmCampaign
         };
 
         // 收集自訂欄位資料
@@ -599,3 +617,29 @@ function generateEventEmailHTML(data) {
         </div>
     </div>`;
 }
+
+// ==========================================
+// 行銷分享邏輯
+// ==========================================
+window.shareToLine = function() {
+    // 移除 UTM 參數，確保分享出去的是乾淨網址，並可自行附加分享者的 utm (可選)
+    const cleanUrl = window.location.origin + window.location.pathname + "?id=" + eventId;
+    const shareUrl = cleanUrl + "&utm_source=line_share";
+    window.open(`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareUrl)}`, '_blank');
+};
+
+window.shareToFB = function() {
+    const cleanUrl = window.location.origin + window.location.pathname + "?id=" + eventId;
+    const shareUrl = cleanUrl + "&utm_source=facebook_share";
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank');
+};
+
+window.copyEventLink = function() {
+    const cleanUrl = window.location.origin + window.location.pathname + "?id=" + eventId;
+    const shareUrl = cleanUrl + "&utm_source=copy_link";
+    navigator.clipboard.writeText(shareUrl).then(() => {
+        alert("活動連結已複製！快分享給朋友吧。");
+    }).catch(err => {
+        console.error('複製失敗: ', err);
+    });
+};
