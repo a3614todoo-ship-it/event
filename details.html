@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
     
+    <!-- QRCode.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
@@ -85,12 +87,33 @@
 
     <!-- 成功彈窗 (手繪藝術風版) -->
     <div id="successModal" style="display: none; position: fixed; inset: 0; background: rgba(74, 55, 40, 0.4); backdrop-filter: blur(8px); z-index: 2000; justify-content: center; align-items: center; padding: 20px;">
-        <div style="background: #ffffff; border-radius: 40px; max-width: 480px; width: 100%; padding: 50px; text-align: center; box-shadow: 0 40px 100px rgba(74, 55, 40, 0.2); border: 1px solid var(--border);">
-            <div style="width: 100px; height: 100px; background: #fdfbf7; border: 2px solid var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 30px;">
-                <i class="fas fa-check" style="color: var(--accent); font-size: 40px;"></i>
+        <div style="background: #ffffff; border-radius: 40px; max-width: 480px; width: 100%; padding: 30px 40px; text-align: center; box-shadow: 0 40px 100px rgba(74, 55, 40, 0.2); border: 1px solid var(--border); max-height: 90vh; overflow-y: auto;">
+            <div style="width: 80px; height: 80px; background: #fdfbf7; border: 2px solid var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                <i class="fas fa-check" style="color: var(--accent); font-size: 32px;"></i>
             </div>
-            <h2 id="successModalTitle" style="color: var(--text-main); margin-bottom: 20px; font-family: 'Noto Serif TC', serif; font-size: 2.2rem;">報名成功！</h2>
-            <p id="successModalDesc" style="color: var(--text-muted); line-height: 1.8; margin-bottom: 40px; font-size: 1.1rem;">感謝您的參與，詳細資訊已發送至您的信箱。</p>
+            <h2 id="successModalTitle" style="color: var(--text-main); margin-bottom: 15px; font-family: 'Noto Serif TC', serif; font-size: 2rem;">報名成功！</h2>
+            <p id="successModalDesc" style="color: var(--text-muted); line-height: 1.8; margin-bottom: 25px; font-size: 1.1rem;">感謝您的參與，詳細資訊與報名序號已登錄。<br>系統已發送確認信至您的信箱，請查收。</p>
+            
+            <!-- QR Code 顯示區域 (僅限正式報名) -->
+            <div id="qrCodeContainer" style="display: none; background: #fdfbf7; padding: 20px; border-radius: 20px; border: 1px dashed var(--accent); margin-bottom: 30px; text-align: center;">
+                <div id="qrcode" style="display: flex; justify-content: center; margin-bottom: 10px;"></div>
+                <p style="font-size: 0.85rem; color: var(--accent); font-weight: bold; margin: 0;">您的專屬報到 QR Code</p>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">活動當天請出示此碼以完成快速報到</p>
+            </div>
+
+            <!-- 加入行事曆按鈕組 -->
+            <div id="calendarButtons" style="display: none; margin-bottom: 30px; border-top: 1px solid var(--border); padding-top: 25px;">
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px;">將活動加入您的行事曆：</p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button id="btnGoogleCal" class="btn-calendar" style="flex: 1; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 12px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <img src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_48dp.png" width="18" alt="Google"> Google
+                    </button>
+                    <button id="btnICal" class="btn-calendar" style="flex: 1; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 12px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="far fa-calendar-plus" style="color: #4285f4; font-size: 18px;"></i> Apple / Outlook
+                    </button>
+                </div>
+            </div>
+
             <button onclick="closeSuccessModal()" style="width: 100%; padding: 18px; background: var(--text-main); border: none; border-radius: 50px; color: white; font-weight: 700; cursor: pointer; transition: 0.3s; font-size: 1.1rem;">
                 返回活動列表
             </button>

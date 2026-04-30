@@ -482,6 +482,211 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ==========================================
+    // QR Code 掃描報到
+    // ==========================================
+    const openScannerBtn = document.getElementById('openScannerBtn');
+    const qrScannerModal = document.getElementById('qrScannerModal');
+    const closeScannerBtn = document.querySelector('.close-scanner');
+    const scannerResult = document.getElementById('scannerResult');
+    let html5QrCode = null;
+
+    if (openScannerBtn) {
+        openScannerBtn.addEventListener('click', () => {
+            qrScannerModal.style.display = 'block';
+            startScanner();
+        });
+    }
+
+    if (closeScannerBtn) {
+        closeScannerBtn.addEventListener('click', () => {
+            stopScanner();
+            qrScannerModal.style.display = 'none';
+        });
+    }
+
+    function startScanner() {
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("reader");
+        }
+        
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            config,
+            onScanSuccess
+        ).catch(err => {
+            console.error("無法開啟相機:", err);
+            alert("無法開啟相機，請檢查權限設定");
+        });
+    }
+
+    function stopScanner() {
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => {
+                console.log("掃描器已停止");
+            }).catch(err => console.error("停止失敗:", err));
+        }
+        if (scannerResult) {
+            scannerResult.style.display = 'none';
+            scannerResult.innerHTML = '';
+        }
+    }
+
+    async function onScanSuccess(decodedText) {
+        // decodedText 即為 registrationId
+        console.log("掃描到序號:", decodedText);
+        
+        // 播放成功音效 (可選)
+        // 避免重複掃描
+        if (scannerResult.style.display === 'block' && scannerResult.dataset.lastId === decodedText) return;
+
+        try {
+            const regRef = db.collection('event_registrations').doc(decodedText);
+            const regDoc = await regRef.get();
+
+            if (!regDoc.exists) {
+                showScannerFeedback("無效的序號", "error");
+                return;
+            }
+
+            const data = regDoc.data();
+            
+            // 檢查活動是否符合 (可選：限制只能掃描目前選取的活動)
+            const selectedEventId = checkinSelect.value;
+            if (selectedEventId && data.eventId !== selectedEventId) {
+                showScannerFeedback(`序號正確，但活動不符：<br>${data.eventName}`, "warning");
+                return;
+            }
+
+            if (data.status === 'checked-in') {
+                showScannerFeedback(`此序號已於先前報到：<br><strong>${data.userName}</strong>`, "warning");
+            } else if (data.status === 'registered') {
+                await regRef.update({ status: 'checked-in' });
+                showScannerFeedback(`報到成功！<br>歡迎您，<strong>${data.userName}</strong>`, "success");
+            } else {
+                showScannerFeedback(`此序號狀態不符 (${data.status})，無法報到。`, "error");
+            }
+            
+            scannerResult.dataset.lastId = decodedText;
+
+        } catch (err) {
+            console.error("掃描處理出錯:", err);
+            showScannerFeedback("讀取資料失敗", "error");
+        }
+    }
+
+    function showScannerFeedback(msg, type) {
+        scannerResult.style.display = 'block';
+        scannerResult.innerHTML = msg;
+        
+        if (type === 'success') {
+            scannerResult.style.background = '#d1fae5';
+            scannerResult.style.color = '#065f46';
+            scannerResult.style.border = '1px solid #10b981';
+        } else if (type === 'warning') {
+            scannerResult.style.background = '#fef3c7';
+            scannerResult.style.color = '#92400e';
+            scannerResult.style.border = '1px solid #f59e0b';
+        } else {
+            scannerResult.style.background = '#fee2e2';
+            scannerResult.style.color = '#991b1b';
+            scannerResult.style.border = '1px solid #ef4444';
+        }
+    }
+
+    // ==========================================
+    // 發送行前提醒
+    // ==========================================
+    const sendRemindersBtn = document.getElementById('sendRemindersBtn');
+    if (sendRemindersBtn) {
+        sendRemindersBtn.addEventListener('click', async () => {
+            const selectedId = checkinSelect.value;
+            if (!selectedId) { alert('請先選擇活動'); return; }
+
+            const ev = events.find(e => e.id === selectedId);
+            const list = eventRegistrations.filter(r => r.eventId === selectedId && r.status === 'registered');
+
+            if (list.length === 0) {
+                alert('目前沒有需要發送提醒的正式報名者 (可能已全部報到或尚未有人報名)。');
+                return;
+            }
+
+            if (!confirm(`確定要發送「行前提醒信」給這 ${list.length} 位參加者嗎？\n這將會包含活動資訊與報到 QR Code。`)) return;
+
+            sendRemindersBtn.disabled = true;
+            let successCount = 0;
+
+            for (let i = 0; i < list.length; i++) {
+                const reg = list[i];
+                sendRemindersBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> 發送中 (${i + 1}/${list.length})`;
+                
+                try {
+                    await sendReminderEmail(reg, ev);
+                    successCount++;
+                } catch (err) {
+                    console.error(`發送給 ${reg.userName} 失敗:`, err);
+                }
+                
+                // 稍微延遲避免頻率限制
+                await new Promise(resolve => setTimeout(resolve, 800));
+            }
+
+            alert(`提醒信發送完成！\n成功：${successCount} 封\n失敗：${list.length - successCount} 封`);
+            sendRemindersBtn.disabled = false;
+            sendRemindersBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 發送提醒';
+        });
+    }
+
+    async function sendReminderEmail(regData, eventData) {
+        const mainFont = 'system-ui, -apple-system, sans-serif';
+        const primaryBg = '#fdfbf7';
+        const accentColor = '#d97706';
+        const textMain = '#4a3728';
+
+        const emailHtml = `
+        <div style="background-color: #f5f1ea; padding: 40px 20px; font-family: ${mainFont};">
+            <div style="max-width: 600px; margin: 0 auto; background-color: ${primaryBg}; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 30px rgba(74, 55, 40, 0.1); border: 1px solid #e5e0d8;">
+                <div style="background: #ffffff; padding: 45px 20px; text-align: center; border-bottom: 1px solid #f1ece4;">
+                    <h1 style="margin: 0; font-size: 26px; color: ${textMain}; letter-spacing: 6px; font-weight: bold;">藝 境 空 間</h1>
+                    <p style="margin: 10px 0 0 0; font-size: 14px; color: ${accentColor}; letter-spacing: 2px; text-transform: uppercase;">Event Reminder</p>
+                </div>
+                <div style="padding: 40px; line-height: 1.8; color: ${textMain};">
+                    <p style="margin-bottom: 20px; font-size: 16px;">親愛的 <strong>${regData.userName}</strong> 您好，</p>
+                    <p style="margin-bottom: 25px;">這是一封行前提醒！我們非常期待與您在活動 <strong style="color: ${accentColor};">${eventData.name}</strong> 見面。</p>
+                    
+                    <div style="background-color: #ffffff; padding: 25px; border-radius: 16px; border: 1px solid #eee; margin-bottom: 30px;">
+                        <h3 style="margin: 0 0 15px 0; font-size: 18px; color: ${textMain}; border-bottom: 2px solid ${accentColor}; display: inline-block; padding-bottom: 5px;">📅 活動資訊回顧</h3>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 15px;">
+                            <tr><td style="padding: 8px 0; color: #8d7a6b; width: 100px;">日期</td><td style="padding: 8px 0; font-weight: bold;">${eventData.date}</td></tr>
+                            <tr><td style="padding: 8px 0; color: #8d7a6b;">時間</td><td style="padding: 8px 0; font-weight: bold;">${eventData.time}</td></tr>
+                            <tr><td style="padding: 8px 0; color: #8d7a6b;">地點</td><td style="padding: 8px 0; font-weight: bold;">${eventData.location}</td></tr>
+                        </table>
+                    </div>
+
+                    <div style="text-align: center; background: #ffffff; padding: 30px; border-radius: 16px; border: 1px dashed #d97706; margin-bottom: 30px;">
+                        <p style="margin: 0 0 15px 0; font-size: 15px; font-weight: bold; color: #d97706;">📌 報到憑證</p>
+                        <img src="https://quickchart.io/chart?cht=qr&chs=180x180&chl=${regData.id}&choe=UTF-8" width="180" height="180" alt="QR Code" style="display: block; margin: 0 auto;">
+                        <p style="margin: 15px 0 0 0; font-size: 14px; color: #4a3728;">請於抵達現場時<strong>預先開啟此 QR Code</strong></p>
+                        <p style="margin: 5px 0 0 0; font-size: 12px; color: #8d7a6b;">(若無法開啟，憑手機末三碼亦可報到)</p>
+                    </div>
+
+                    <div style="text-align: center; border-top: 1px solid #f1ece4; padding-top: 30px; margin-top: 20px;">
+                        <h4 style="margin: 0; font-size: 18px; color: ${textMain};">期待您的光臨！</h4>
+                        <p style="margin: 10px 0 0 0; font-size: 13px; color: #bcae9e;">藝境空間 管理團隊 敬上</p>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+        return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { 
+            to_email: regData.userEmail, 
+            subject: `【行前提醒】${eventData.name}`, 
+            message_html: emailHtml 
+        });
+    }
+
+    // ==========================================
     // 匯出名冊
     // ==========================================
     const exportCheckinCsvBtn = document.getElementById('exportCheckinCsvBtn');

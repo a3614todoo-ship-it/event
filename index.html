@@ -11,6 +11,8 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@300;400;700&display=swap"
         rel="stylesheet">
+    <!-- FullCalendar -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
@@ -64,6 +66,24 @@
 
     <!-- 當期活動列表 -->
     <main id="active-events" class="container">
+        <div class="section-title-wrapper" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px;">
+            <div class="section-title">
+                <h2>所有活動</h2>
+                <p>探索更多藝術的可能性</p>
+            </div>
+            <div class="view-toggle" style="display: flex; background: rgba(0,0,0,0.05); padding: 5px; border-radius: 50px;">
+                <button id="listViewBtn" class="toggle-btn active" style="padding: 8px 20px; border: none; border-radius: 50px; cursor: pointer; transition: 0.3s; background: var(--text-main); color: white; font-weight: 500;">
+                    <i class="fas fa-list"></i> 列表
+                </button>
+                <button id="calendarViewBtn" class="toggle-btn" style="padding: 8px 20px; border: none; border-radius: 50px; cursor: pointer; transition: 0.3s; background: transparent; color: var(--text-muted); font-weight: 500;">
+                    <i class="fas fa-calendar-alt"></i> 月曆
+                </button>
+            </div>
+        </div>
+
+        <!-- 月曆視圖容器 -->
+        <div id="calendarView" style="display: none; background: #ffffff; padding: 30px; border-radius: 30px; border: 1px solid var(--border); box-shadow: 0 20px 50px rgba(0,0,0,0.05); margin-bottom: 50px;"></div>
+
         <div id="eventGrid" class="event-grid">
             <!-- 動態注入活動卡片 -->
             <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: var(--text-muted);">

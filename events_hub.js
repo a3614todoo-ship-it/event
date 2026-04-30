@@ -30,7 +30,101 @@ document.addEventListener('DOMContentLoaded', () => {
 
     fetchData();
     initSearch();
+    initViewToggle();
 });
+
+let calendar = null;
+
+// 初始化視圖切換
+function initViewToggle() {
+    const listBtn = document.getElementById('listViewBtn');
+    const calBtn = document.getElementById('calendarViewBtn');
+    const grid = document.getElementById('eventGrid');
+    const calView = document.getElementById('calendarView');
+    const searchSection = document.querySelector('.search-container');
+
+    if (!listBtn || !calBtn) return;
+
+    listBtn.addEventListener('click', () => {
+        listBtn.classList.add('active');
+        listBtn.style.background = 'var(--text-main)';
+        listBtn.style.color = 'white';
+        calBtn.classList.remove('active');
+        calBtn.style.background = 'transparent';
+        calBtn.style.color = 'var(--text-muted)';
+        
+        grid.style.display = 'grid';
+        calView.style.display = 'none';
+        if (searchSection) searchSection.style.display = 'block';
+    });
+
+    calBtn.addEventListener('click', () => {
+        calBtn.classList.add('active');
+        calBtn.style.background = 'var(--text-main)';
+        calBtn.style.color = 'white';
+        listBtn.classList.remove('active');
+        listBtn.style.background = 'transparent';
+        listBtn.style.color = 'var(--text-muted)';
+        
+        grid.style.display = 'none';
+        calView.style.display = 'block';
+        if (searchSection) searchSection.style.display = 'none'; // 月曆視圖下暫時隱藏搜尋以保簡潔
+        
+        initCalendar();
+    });
+}
+
+// 初始化月曆
+function initCalendar() {
+    const calEl = document.getElementById('calendarView');
+    if (!calEl || typeof FullCalendar === 'undefined') return;
+
+    // 將活動轉換為 FullCalendar 格式
+    const events = allEvents.filter(e => e.isActive !== false).map(e => ({
+        id: e.id,
+        title: e.name,
+        start: e.date,
+        backgroundColor: 'var(--accent)',
+        borderColor: 'var(--accent)',
+        extendedProps: {
+            time: e.time,
+            location: e.location
+        }
+    }));
+
+    if (calendar) {
+        calendar.destroy();
+    }
+
+    calendar = new FullCalendar.Calendar(calEl, {
+        initialView: 'dayGridMonth',
+        locale: 'zh-tw',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: ''
+        },
+        buttonText: {
+            today: '今天'
+        },
+        events: events,
+        eventClick: function(info) {
+            location.href = `details.html?id=${info.event.id}`;
+        },
+        eventDidMount: function(info) {
+            // 自訂事件顯示內容
+            const dot = info.el.querySelector('.fc-daygrid-event-dot');
+            if (dot) dot.style.borderColor = 'var(--accent)';
+            
+            // 加上滑鼠懸停提示
+            info.el.title = `${info.event.title}\n時間：${info.event.extendedProps.time}\n地點：${info.event.extendedProps.location}`;
+        },
+        height: 'auto',
+        aspectRatio: 1.35
+    });
+
+    calendar.render();
+}
 
 // 獲取活動與報名數據
 async function fetchData() {

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>取消報名 | 藝境空間</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .cancel-card { background: #ffffff; border-radius: 40px; max-width: 500px; width: 100%; padding: 50px; text-align: center; box-shadow: 0 40px 100px rgba(74, 55, 40, 0.1); border: 1px solid var(--border); }
+        .icon-box { width: 80px; height: 80px; background: #fef2f2; border: 2px solid #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 30px; }
+        .event-info { background: #fdfbf7; padding: 20px; border-radius: 20px; border: 1px dashed var(--border); margin: 25px 0; text-align: left; }
+        .btn-confirm { background: #ef4444; color: white; border: none; padding: 18px; width: 100%; border-radius: 50px; font-weight: 700; cursor: pointer; transition: 0.3s; font-size: 1.1rem; margin-top: 10px; }
+        .btn-confirm:hover { background: #dc2626; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(239, 68, 68, 0.2); }
+        .btn-back { background: transparent; border: none; color: var(--text-muted); margin-top: 20px; cursor: pointer; text-decoration: underline; font-size: 0.95rem; }
+    </style>
+</head>
+<body>
+
+    <div class="cancel-card" id="mainCard">
+        <div id="loadingState">
+            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--accent);"></i>
+            <p style="margin-top: 20px;">驗證報名資訊中...</p>
+        </div>
+
+        <div id="confirmState" style="display: none;">
+            <div class="icon-box">
+                <i class="fas fa-calendar-times" style="color: #ef4444; font-size: 32px;"></i>
+            </div>
+            <h1 style="font-family: 'Noto Serif TC', serif; font-size: 2rem; margin-bottom: 15px;">確定要取消報名嗎？</h1>
+            <p style="color: var(--text-muted); line-height: 1.6;">取消後，名額將會立即釋出給其他參與者，此操作無法撤回。</p>
+            
+            <div class="event-info">
+                <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: #8d7a6b;">活動資訊：</p>
+                <h3 id="eventName" style="margin: 0; font-size: 1.2rem;">---</h3>
+                <p id="eventTime" style="margin: 5px 0 0 0; color: var(--text-muted);">---</p>
+            </div>
+
+            <button id="confirmBtn" class="btn-confirm">確認取消報名</button>
+            <button onclick="location.href='index.html'" class="btn-back">返回首頁</button>
+        </div>
+
+        <div id="successState" style="display: none;">
+            <div style="width: 80px; height: 80px; background: #f0fdf4; border: 2px solid #22c55e; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 30px;">
+                <i class="fas fa-check" style="color: #22c55e; font-size: 32px;"></i>
+            </div>
+            <h1 style="font-family: 'Noto Serif TC', serif; font-size: 2rem; margin-bottom: 15px;">已成功取消</h1>
+            <p style="color: var(--text-muted); line-height: 1.6; margin-bottom: 30px;">您的報名紀錄已刪除，名額已釋出。期待未來有機會在其他活動見到您！</p>
+            <button onclick="location.href='index.html'" class="btn-primary" style="padding: 15px 40px; border-radius: 50px;">返回首頁</button>
+        </div>
+
+        <div id="errorState" style="display: none;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #f59e0b; margin-bottom: 20px;"></i>
+            <h2 style="font-family: 'Noto Serif TC', serif;">連結無效</h2>
+            <p id="errorMsg" style="color: var(--text-muted); margin-bottom: 30px;">找不到對應的報名紀錄，或驗證資訊有誤。</p>
+            <button onclick="location.href='index.html'" class="btn-secondary" style="padding: 12px 30px; border-radius: 50px;">返回首頁</button>
+        </div>
+    </div>
+
+    <script src="cancel.js"></script>
+</body>
+</html>

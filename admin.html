@@ -7,6 +7,8 @@
     <!-- 引入共用語法與樣式 -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
     
     <!-- 引入 Chart.js -->
@@ -148,6 +150,8 @@
                         <input type="text" id="checkinSearchInput" placeholder="輸入姓名或電話搜尋..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
                     </div>
                     <div style="display: flex; gap: 10px; align-items: flex-end;">
+                        <button id="openScannerBtn" class="btn-primary" style="height: 42px; background: #6366f1;"><i class="fas fa-qrcode"></i> 掃描報到</button>
+                        <button id="sendRemindersBtn" class="btn-secondary" style="height: 42px; border-color: #6366f1; color: #6366f1;"><i class="fas fa-paper-plane"></i> 發送提醒</button>
                         <button id="exportCheckinCsvBtn" class="btn-secondary" style="height: 42px;"><i class="fas fa-file-csv"></i> 匯出名冊</button>
                     </div>
                 </div>
@@ -343,6 +347,17 @@
                     <button type="submit" class="btn-primary">儲存活動</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- QR 掃描彈窗 -->
+    <div id="qrScannerModal" class="modal">
+        <div class="modal-content" style="max-width: 500px; text-align: center;">
+            <span class="close-scanner" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            <h2 style="font-family: 'Noto Serif TC', serif; margin-bottom: 20px;">掃描報到 QR Code</h2>
+            <div id="reader" style="width: 100%; border-radius: 12px; overflow: hidden; background: #000;"></div>
+            <div id="scannerResult" style="margin-top: 20px; padding: 15px; border-radius: 8px; display: none;"></div>
+            <p style="margin-top: 20px; color: var(--text-muted); font-size: 0.9rem;">請將使用者的 QR Code 放在鏡頭前</p>
         </div>
     </div>
 

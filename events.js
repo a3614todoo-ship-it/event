@@ -41,8 +41,22 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     loadEventData();
+    trackView();
     setupForm();
 });
+
+// 追蹤活動瀏覽量
+async function trackView() {
+    if (!eventId) return;
+    try {
+        // 使用原子操作增加瀏覽量
+        await db.collection("events").doc(eventId).update({
+            views: firebase.firestore.FieldValue.increment(1)
+        });
+    } catch (err) {
+        console.warn("無法更新瀏覽量:", err);
+    }
+}
 
 async function loadEventData() {
     try {
@@ -331,11 +345,13 @@ function setupForm() {
 
             // 只有正式報名成功才寄信，候補則不寄信 (做法 B)
             if (!isWaitlist) {
-                sendRegistrationEmail({ id: docRef.id, ...regData });
+                const fullData = { id: docRef.id, ...regData };
+                sendRegistrationEmail(fullData);
+                // 顯示成功彈窗 (帶入完整的報名資料以利產生 QR/行事曆)
+                showSuccessModal(isWaitlist, fullData);
+            } else {
+                showSuccessModal(isWaitlist, regData);
             }
-
-            // 顯示成功彈窗
-            showSuccessModal(isWaitlist);
         } catch (err) {
             console.error(err);
             alert("報名失敗，請稍後再試。");
@@ -348,19 +364,91 @@ function setupForm() {
 // ---------------------------------------------------------
 // 定案版：成功彈窗控制
 // ---------------------------------------------------------
-function showSuccessModal(isWaitlist) {
+// ---------------------------------------------------------
+// 定案版：成功彈窗控制
+// ---------------------------------------------------------
+function showSuccessModal(isWaitlist, data) {
     const modal = document.getElementById('successModal');
     const titleEl = document.getElementById('successModalTitle');
     const descEl = document.getElementById('successModalDesc');
+    const qrContainer = document.getElementById('qrCodeContainer');
+    const calButtons = document.getElementById('calendarButtons');
+    const qrcodeDiv = document.getElementById('qrcode');
     
     if (isWaitlist) {
         titleEl.textContent = '候補登記成功！';
         descEl.innerHTML = '目前活動名額已滿，系統已成功記錄您的候補請求。<br><br>請注意：若有名額釋出，系統將會立即發送「遞補成功通知」至您的信箱，請留意。';
+        if (qrContainer) qrContainer.style.display = 'none';
+        if (calButtons) calButtons.style.display = 'none';
     } else {
         titleEl.textContent = '報名成功！';
         descEl.innerHTML = '感謝您的參與，詳細資訊與報名序號已登錄。<br>系統已發送確認信至您的信箱，請查收。';
+        
+        // 顯示 QR Code (正式名額)
+        if (qrContainer && qrcodeDiv && typeof QRCode !== 'undefined') {
+            qrcodeDiv.innerHTML = ''; // 清空舊的
+            new QRCode(qrcodeDiv, {
+                text: data.id,
+                width: 160,
+                height: 160,
+                colorDark : "#4a3728",
+                colorLight : "#fdfbf7",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+            qrContainer.style.display = 'block';
+        }
+
+        // 顯示行事曆按鈕
+        if (calButtons) {
+            calButtons.style.display = 'block';
+            
+            // 綁定 Google Calendar
+            document.getElementById('btnGoogleCal').onclick = () => {
+                const url = generateGoogleCalendarUrl(data);
+                window.open(url, '_blank');
+            };
+            
+            // 綁定 iCal
+            document.getElementById('btnICal').onclick = () => {
+                downloadICal(data);
+            };
+        }
     }
     modal.style.display = 'flex';
+}
+
+function generateGoogleCalendarUrl(data) {
+    const startTime = data.eventDate.replace(/-/g, '') + 'T' + data.eventTime.split('~')[0].replace(':', '') + '00';
+    const endTime = data.eventDate.replace(/-/g, '') + 'T' + data.eventTime.split('~')[1].replace(':', '') + '00';
+    const title = encodeURIComponent(`【活動】${data.eventName}`);
+    const details = encodeURIComponent(`您的報名序號：${data.id.substring(0, 8).toUpperCase()}\n地點：${currentEvent.location}`);
+    const location = encodeURIComponent(currentEvent.location);
+    return `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startTime}/${endTime}&details=${details}&location=${location}&sf=true&output=xml`;
+}
+
+function downloadICal(data) {
+    const startTime = data.eventDate.replace(/-/g, '') + 'T' + data.eventTime.split('~')[0].replace(':', '') + '00';
+    const endTime = data.eventDate.replace(/-/g, '') + 'T' + data.eventTime.split('~')[1].replace(':', '') + '00';
+    const icsContent = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        `DTSTART:${startTime}`,
+        `DTEND:${endTime}`,
+        `SUMMARY:【活動】${data.eventName}`,
+        `DESCRIPTION:您的報名序號：${data.id.substring(0, 8).toUpperCase()}\\n地點：${currentEvent.location}`,
+        `LOCATION:${currentEvent.location}`,
+        'END:VEVENT',
+        'END:VCALENDAR'
+    ].join('\n');
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.setAttribute('download', `event_${data.id.substring(0,8)}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 function closeSuccessModal() {
@@ -452,13 +540,32 @@ function generateEventEmailHTML(data) {
                     </table>
                 </div>
 
+                ${status === 'registered' ? `
+                <!-- QR Code 區塊 (使用 QuickChart API) -->
+                <div style="text-align: center; background: #ffffff; padding: 30px; border-radius: 16px; border: 1px dashed #d97706; margin-bottom: 30px;">
+                    <p style="margin: 0 0 15px 0; font-size: 15px; font-weight: bold; color: #d97706;">您的專屬報到 QR Code</p>
+                    <img src="https://quickchart.io/chart?cht=qr&chs=180x180&chl=${data.id}&choe=UTF-8" width="180" height="180" alt="QR Code" style="display: block; margin: 0 auto;">
+                    <p style="margin: 15px 0 0 0; font-size: 13px; color: #8d7a6b;">活動當天請出示此碼以完成快速報到</p>
+                </div>
+
+                <!-- 行事曆連結 -->
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <a href="https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('【活動】'+data.eventName)}&dates=${data.eventDate.replace(/-/g, '')}T${data.eventTime.split('~')[0].replace(':', '')}00/${data.eventDate.replace(/-/g, '')}T${data.eventTime.split('~')[1].replace(':', '')}00&details=${encodeURIComponent('序號：'+data.id.substring(0,8))}&location=${encodeURIComponent(data.eventLocation || '')}&sf=true&output=xml" 
+                       style="display: inline-block; padding: 10px 20px; background: #ffffff; border: 1px solid #ddd; border-radius: 8px; color: #4285f4; text-decoration: none; font-size: 14px; font-weight: bold; margin-right: 10px;">
+                       + 加入 Google 日曆
+                    </a>
+                </div>
+                ` : ''}
+
                 ${status !== 'cancelled' ? `
                 <!-- 報到須知 (取消時不顯示) -->
                 <div style="border: 1px solid #e5e0d8; border-radius: 12px; padding: 20px; background-color: #ffffff; margin-bottom: 25px;">
-                    <h4 style="margin: 0 0 10px 0; font-size: 15px; color: ${textMain};">📍 報到須知</h4>
-                    <p style="margin: 0; font-size: 14px; color: #6b5a4d;">
-                        活動當天請憑「<strong>報名姓名</strong>」或「<strong>聯絡電話末三碼</strong>」向現場櫃檯人員報到即可。建議您提早於活動開始前 <strong>10 分鐘</strong> 抵達現場。
-                    </p>
+                    <h4 style="margin: 0 0 12px 0; font-size: 15px; color: ${textMain};">📍 報到須知</h4>
+                    <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #6b5a4d; line-height: 1.8;">
+                        <li style="margin-bottom: 5px;">活動當天請<strong>預先開啟並準備好此 QR Code</strong>，或憑「報名姓名」及「手機末三碼」報到即可。</li>
+                        <li style="margin-bottom: 5px;">建議您提早於活動開始前 <strong>10 分鐘</strong> 抵達現場。</li>
+                        <li>為了維護活動品質，活動開始 15 分鐘後將停止報到。</li>
+                    </ul>
                 </div>
                 ` : ''}
 
@@ -469,6 +576,17 @@ function generateEventEmailHTML(data) {
                     <p style="margin: 0; font-size: 14px; color: #8d7a6b; line-height: 1.6;">
                         為了讓更多喜愛藝文的朋友能參與活動，若您因故不克出席，請務必於活動開始 <strong>2 天前</strong> 聯繫我們。感謝您的配合與體諒！
                     </p>
+                </div>
+                ` : ''}
+
+                <!-- 取消報名連結 (僅限正式報名與候補顯示) -->
+                ${status !== 'cancelled' ? `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <p style="font-size: 13px; color: #bcae9e; margin-bottom: 8px;">若您因故不克參加，請點擊下方連結取消：</p>
+                    <a href="https://a3614todoo-ship-it.github.io/event/cancel.html?id=${data.id}&email=${data.userEmail}" 
+                       style="color: #ef4444; text-decoration: underline; font-size: 13px;">
+                       我要取消報名 (無法撤回)
+                    </a>
                 </div>
                 ` : ''}
 
