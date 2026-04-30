@@ -188,6 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editEventImage').value = '';
         document.getElementById('editEventIsActive').checked = true;
         document.getElementById('editEventAllowWaitlist').checked = true;
+        document.getElementById('editEventAutoPromote').checked = true;
         currentEditingCustomFields = [];
         renderCustomFieldEditors();
         document.getElementById('eventModalTitle').textContent = '新增活動';
@@ -254,6 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
             image: document.getElementById('editEventImage').value.trim(),
             isActive: document.getElementById('editEventIsActive').checked,
             allowWaitlist: document.getElementById('editEventAllowWaitlist').checked,
+            autoPromote: document.getElementById('editEventAutoPromote').checked,
             customFields: currentEditingCustomFields.filter(f => f.name.trim() !== '')
         };
 
@@ -327,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editEventImage').value = ev.image || '';
         document.getElementById('editEventIsActive').checked = ev.isActive !== false;
         document.getElementById('editEventAllowWaitlist').checked = ev.allowWaitlist !== false;
+        document.getElementById('editEventAutoPromote').checked = ev.autoPromote !== false;
         
         currentEditingCustomFields = ev.customFields ? JSON.parse(JSON.stringify(ev.customFields)) : [];
         renderCustomFieldEditors();
