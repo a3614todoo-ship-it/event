@@ -638,16 +638,37 @@ window.shareToFB = function() {
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank');
 };
 
-window.copyEventLink = function() {
+window.nativeShareOrCopy = async function() {
     const cleanUrl = window.location.origin + window.location.pathname + "?id=" + eventId;
-    const shareUrl = cleanUrl + "&utm_source=copy_link";
+    const shareUrl = cleanUrl + "&utm_source=native_share";
     
     const eventName = currentEvent ? currentEvent.name : "精選活動";
-    const textToCopy = `【${eventName}】活動報名中！\n立刻查看詳情：${shareUrl}`;
-    
-    navigator.clipboard.writeText(textToCopy).then(() => {
-        alert("活動介紹與連結已複製！快分享給朋友吧。");
+    const shareTitle = "藝境空間 | 精彩活動報名";
+    const shareText = `【${eventName}】活動報名中！立刻查看詳情👇\n`;
+
+    // 判斷瀏覽器是否支援原生 Web Share API (手機瀏覽器通常支援，包含 IG/FB/Message 等選項)
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: shareTitle,
+                text: shareText,
+                url: shareUrl
+            });
+            console.log('原生分享成功');
+        } catch (err) {
+            console.log('使用者取消分享或發生錯誤:', err);
+            fallbackToCopy(shareText + shareUrl);
+        }
+    } else {
+        // 桌機或不支援的瀏覽器，退回傳統的複製連結
+        fallbackToCopy(shareText + shareUrl);
+    }
+};
+
+function fallbackToCopy(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert("活動介紹與連結已複製！請手動貼到 IG 或其他社群平台與朋友分享。");
     }).catch(err => {
         console.error('複製失敗: ', err);
     });
-};
+}
