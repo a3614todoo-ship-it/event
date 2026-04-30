@@ -622,10 +622,14 @@ function generateEventEmailHTML(data) {
 // 行銷分享邏輯
 // ==========================================
 window.shareToLine = function() {
-    // 移除 UTM 參數，確保分享出去的是乾淨網址，並可自行附加分享者的 utm (可選)
     const cleanUrl = window.location.origin + window.location.pathname + "?id=" + eventId;
     const shareUrl = cleanUrl + "&utm_source=line_share";
-    window.open(`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(shareUrl)}`, '_blank');
+    
+    // 自動帶入活動名稱與邀請文字
+    const eventName = currentEvent ? currentEvent.name : "精選活動";
+    const text = `【藝境空間 | 活動推薦】\n${eventName}\n誠摯邀請您一起來參加！報名詳情請看👇\n${shareUrl}`;
+    
+    window.open(`https://line.me/R/msg/text/?${encodeURIComponent(text)}`, '_blank');
 };
 
 window.shareToFB = function() {
@@ -637,8 +641,12 @@ window.shareToFB = function() {
 window.copyEventLink = function() {
     const cleanUrl = window.location.origin + window.location.pathname + "?id=" + eventId;
     const shareUrl = cleanUrl + "&utm_source=copy_link";
-    navigator.clipboard.writeText(shareUrl).then(() => {
-        alert("活動連結已複製！快分享給朋友吧。");
+    
+    const eventName = currentEvent ? currentEvent.name : "精選活動";
+    const textToCopy = `【${eventName}】活動報名中！\n立刻查看詳情：${shareUrl}`;
+    
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        alert("活動介紹與連結已複製！快分享給朋友吧。");
     }).catch(err => {
         console.error('複製失敗: ', err);
     });
