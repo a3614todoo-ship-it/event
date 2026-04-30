@@ -1297,6 +1297,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             <tr><td style="padding: 10px 0; color: #8d7a6b;">報名序號</td><td style="padding: 10px 0; font-family: monospace; font-size: 18px; color: ${textMain};">${(regData.id || '').substring(0, 8).toUpperCase()}</td></tr>
                         </table>
                     </div>
+
+                    <div style="text-align: center; background: #ffffff; padding: 30px; border-radius: 16px; border: 1px dashed #d97706; margin-bottom: 30px;">
+                        <p style="margin: 0 0 15px 0; font-size: 15px; font-weight: bold; color: #d97706;">📌 報到憑證</p>
+                        <img src="https://quickchart.io/chart?cht=qr&chs=180x180&chl=${regData.id}&choe=UTF-8" width="180" height="180" alt="QR Code" style="display: block; margin: 0 auto;">
+                        <p style="margin: 15px 0 0 0; font-size: 14px; color: #4a3728;">請於抵達現場時<strong>預先開啟此 QR Code</strong></p>
+                        <p style="margin: 5px 0 0 0; font-size: 12px; color: #8d7a6b;">(若無法開啟，憑手機末三碼亦可報到)</p>
+                    </div>
+
                     <div style="background-color: #fdfaf5; border: 1px solid rgba(217, 119, 6, 0.1); border-radius: 16px; padding: 25px; margin-bottom: 30px;">
                         <h4 style="margin: 0 0 10px 0; color: #d97706; font-size: 15px;">⚠️ 溫馨提醒</h4>
                         <p style="margin: 0; font-size: 14px; color: #8d7a6b; line-height: 1.6;">
