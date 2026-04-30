@@ -463,3 +463,40 @@ footer {
     border-color: var(--accent);
     box-shadow: 0 25px 50px rgba(217, 119, 6, 0.15);
 }
+
+/* 後台操作按鈕樣式 */
+.btn-action-edit, .btn-action-survey, .btn-action-delete {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid transparent;
+    text-decoration: none;
+}
+
+.btn-action-edit {
+    background-color: #eff6ff;
+    color: #2563eb;
+    border-color: #dbeafe;
+}
+.btn-action-edit:hover { background-color: #2563eb; color: white; }
+
+.btn-action-survey {
+    background-color: #fffbeb;
+    color: #d97706;
+    border-color: #fef3c7;
+}
+.btn-action-survey:hover { background-color: #d97706; color: white; }
+
+.btn-action-delete {
+    padding: 6px 10px;
+    background-color: #fef2f2;
+    color: #dc2626;
+    border-color: #fee2e2;
+}
+.btn-action-delete:hover { background-color: #dc2626; color: white; }

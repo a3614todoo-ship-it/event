@@ -340,19 +340,90 @@
 
                 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
 
-                <div class="form-group" style="margin-bottom: 15px;">
+                <div class="form-group" style="margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <label>進階：自訂報名表單欄位</label>
+                        <label><i class="fas fa-list-ul"></i> 自訂報名表單欄位</label>
                         <button type="button" id="addCustomFieldBtn" class="btn-secondary" style="padding: 5px 10px; font-size: 0.85rem;"><i class="fas fa-plus"></i> 新增欄位</button>
                     </div>
                     <div id="customFieldsContainer"></div>
                 </div>
+            </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 30px;">
                     <button type="button" class="btn-secondary close-modal-btn">取消</button>
                     <button type="submit" class="btn-primary">儲存活動</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- 問卷設計 Modal (獨立頁面概念) -->
+    <div id="surveyDesignModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <span class="close-survey-modal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            <h2 style="font-family: 'Noto Serif TC', serif; margin-bottom: 5px;">問卷題目設計</h2>
+            <p id="surveyEventName" style="color: var(--accent); font-weight: bold; margin-bottom: 25px;">活動名稱</p>
+            
+            <form id="surveyDesignForm">
+                <input type="hidden" id="surveyEventId">
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <label style="font-weight: bold;"><i class="fas fa-edit"></i> 設計您的問題</label>
+                        <button type="button" id="addSurveyFieldBtn" class="btn-primary" style="padding: 5px 15px; font-size: 0.85rem; background: var(--accent);"><i class="fas fa-plus"></i> 新增問題</button>
+                    </div>
+                    <div id="surveyFieldsContainer" style="background: rgba(0,0,0,0.02); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); max-height: 450px; overflow-y: auto;">
+                        <!-- 動態注入題目編輯器 -->
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 30px;">
+                    <button type="button" class="btn-secondary close-survey-modal-btn">取消</button>
+                    <button type="submit" class="btn-primary" style="background: var(--text-main);">儲存問卷設定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 問卷統計結果 Modal -->
+    <div id="surveyResultsModal" class="modal">
+        <div class="modal-content" style="max-width: 850px;">
+            <span class="close-results-modal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            <h2 style="font-family: 'Noto Serif TC', serif; margin-bottom: 5px;">問卷結果分析報告</h2>
+            <p id="resultsEventName" style="color: var(--accent); font-weight: bold; margin-bottom: 25px;">活動名稱</p>
+            
+            <div id="surveyStatsContainer">
+                <!-- 數據概覽區 -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                    <div class="stat-card" style="background: #f8fafc; padding: 20px; border-radius: 15px; text-align: center; border: 1px solid #e2e8f0;">
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px;">平均滿意度</p>
+                        <h3 id="avgRating" style="font-size: 2.5rem; color: #d97706; margin: 0;">0.0</h3>
+                        <div id="avgStars" style="color: #d97706; margin-top: 5px;"></div>
+                    </div>
+                    <div class="stat-card" style="background: #f8fafc; padding: 20px; border-radius: 15px; text-align: center; border: 1px solid #e2e8f0;">
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px;">回收份數</p>
+                        <h3 id="totalResponses" style="font-size: 2.5rem; color: var(--text-main); margin: 0;">0</h3>
+                        <p style="font-size: 0.8rem; margin-top: 10px; color: #10b981;"><i class="fas fa-check-circle"></i> 數據已即時更新</p>
+                    </div>
+                    <div class="stat-card" style="background: #f8fafc; padding: 20px; border-radius: 15px; text-align: center; border: 1px solid #e2e8f0;">
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px;">推薦意願</p>
+                        <h3 id="recommendRate" style="font-size: 2.5rem; color: #2563eb; margin: 0;">0%</h3>
+                        <p style="font-size: 0.8rem; margin-top: 10px; color: var(--text-muted);">標記「非常願意」之比例</p>
+                    </div>
+                </div>
+
+                <!-- 回饋細節清單 -->
+                <div style="background: white; border: 1px solid var(--border-color); border-radius: 15px; padding: 25px;">
+                    <h4 style="margin-bottom: 20px; border-left: 4px solid var(--accent); padding-left: 10px;">詳細回饋內容</h4>
+                    <div id="resultsDetailList" style="max-height: 400px; overflow-y: auto;">
+                        <!-- 動態注入每一則回饋 -->
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 30px;">
+                <button type="button" class="btn-primary close-results-modal-btn" style="background: var(--text-main); padding: 10px 30px;">關閉報告</button>
+            </div>
         </div>
     </div>
 

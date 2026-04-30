@@ -163,9 +163,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const eventEditForm = document.getElementById('eventEditForm');
     const addCustomFieldBtn = document.getElementById('addCustomFieldBtn');
     const customFieldsContainer = document.getElementById('customFieldsContainer');
+    const surveyFieldsContainer = document.getElementById('surveyFieldsContainer');
+    const addSurveyFieldBtn = document.getElementById('addSurveyFieldBtn');
     const closeBtns = document.querySelectorAll('.close-modal, .close-modal-btn');
     
     let currentEditingCustomFields = [];
+    let currentEditingSurveyFields = [];
 
     closeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -190,7 +193,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editEventAllowWaitlist').checked = true;
         document.getElementById('editEventAutoPromote').checked = true;
         currentEditingCustomFields = [];
+        currentEditingSurveyFields = [];
         renderCustomFieldEditors();
+        renderSurveyFieldEditors();
         document.getElementById('eventModalTitle').textContent = '新增活動';
         eventEditModal.style.display = 'block';
     });
@@ -202,9 +207,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (addSurveyFieldBtn) {
+        addSurveyFieldBtn.addEventListener('click', () => {
+            currentEditingSurveyFields.push({ name: '', type: 'rating', required: true });
+            renderSurveyFieldEditors();
+        });
+    }
+
     window.updateCustomField = function(index, key, value) {
         if (currentEditingCustomFields[index]) {
             currentEditingCustomFields[index][key] = value;
+        }
+    };
+
+    window.updateSurveyField = function(index, key, value) {
+        if (currentEditingSurveyFields[index]) {
+            currentEditingSurveyFields[index][key] = value;
         }
     };
 
@@ -213,16 +231,20 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCustomFieldEditors();
     };
 
+    window.removeSurveyField = function(index) {
+        currentEditingSurveyFields.splice(index, 1);
+        renderSurveyFieldEditors();
+    };
+
     function renderCustomFieldEditors() {
         if (!customFieldsContainer) return;
         customFieldsContainer.innerHTML = currentEditingCustomFields.map((f, index) => `
             <div class="form-row" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px;">
-                <input type="text" placeholder="欄位名稱 (如: 公司名稱)" value="${f.name}" onchange="updateCustomField(${index}, 'name', this.value)" style="flex: 2; min-width: 150px;">
+                <input type="text" placeholder="報名欄位 (如: 公司名稱)" value="${f.name}" onchange="updateCustomField(${index}, 'name', this.value)" style="flex: 2; min-width: 150px;">
                 <select onchange="updateCustomField(${index}, 'type', this.value)" style="flex: 1; min-width: 120px;">
                     <option value="text" ${f.type === 'text' ? 'selected' : ''}>單行文字</option>
                     <option value="tel" ${f.type === 'tel' ? 'selected' : ''}>電話 (手機)</option>
                     <option value="checkbox" ${f.type === 'checkbox' ? 'selected' : ''}>勾選 (Yes/No)</option>
-                    <option value="select" ${f.type === 'select' ? 'selected' : ''}>下拉選單 (待開發)</option>
                 </select>
                 <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem; white-space: nowrap; cursor: pointer; margin-right: auto;">
                     <input type="checkbox" ${f.required ? 'checked' : ''} onchange="updateCustomField(${index}, 'required', this.checked)"> 必填
@@ -231,6 +253,220 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `).join('');
     }
+
+    function renderSurveyFieldEditors() {
+        if (!surveyFieldsContainer) return;
+        surveyFieldsContainer.innerHTML = currentEditingSurveyFields.map((f, index) => `
+            <div class="form-row" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 15px;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">題目名稱</label>
+                    <input type="text" placeholder="例如：活動內容滿意度" value="${f.name}" onchange="updateSurveyField(${index}, 'name', this.value)" style="width: 100%;">
+                </div>
+                <div style="width: 150px;">
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">題型</label>
+                    <select onchange="updateSurveyField(${index}, 'type', this.value)" style="width: 100%;">
+                        <option value="rating" ${f.type === 'rating' ? 'selected' : ''}>星級評分</option>
+                        <option value="text" ${f.type === 'text' ? 'selected' : ''}>單行文字</option>
+                        <option value="textarea" ${f.type === 'textarea' ? 'selected' : ''}>多行建議</option>
+                        <option value="yesno" ${f.type === 'yesno' ? 'selected' : ''}>是否推薦</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-top: 20px;">
+                    <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem; white-space: nowrap; cursor: pointer;">
+                        <input type="checkbox" ${f.required ? 'checked' : ''} onchange="updateSurveyField(${index}, 'required', this.checked)"> 必填
+                    </label>
+                    <button type="button" class="btn-danger" onclick="removeSurveyField(${index})" style="padding: 5px 10px; border-radius: 6px;"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ==========================================
+    // 問卷結果統計邏輯
+    // ==========================================
+    const surveyResultsModal = document.getElementById('surveyResultsModal');
+    const closeResultsBtns = document.querySelectorAll('.close-results-modal, .close-results-modal-btn');
+
+    closeResultsBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            surveyResultsModal.style.display = 'none';
+        });
+    });
+
+    window.openSurveyResults = async function(eventId) {
+        const ev = events.find(e => e.id === eventId);
+        if (!ev) return;
+
+        document.getElementById('resultsEventName').textContent = `活動：${ev.name}`;
+        document.getElementById('resultsDetailList').innerHTML = '<p style="text-align:center; padding:20px;">分析中...</p>';
+        surveyResultsModal.style.display = 'block';
+
+        try {
+            const snapshot = await db.collection('event_surveys')
+                .where('eventId', '==', eventId)
+                .get();
+
+            if (snapshot.empty) {
+                renderEmptyStats();
+                return;
+            }
+
+            let data = [];
+            snapshot.forEach(doc => data.push(doc.data()));
+            
+            // 在程式端進行排序 (時間由新到舊)
+            data.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+
+            // 計算統計數據
+            let totalRating = 0;
+            let ratingCount = 0;
+            let recommendYes = 0;
+
+            const listHtml = data.map(s => {
+                let ratingHtml = '';
+                // 處理可能存在的評分資料 (相容新舊格式)
+                let r = s.rating;
+                if (s.answers) {
+                    Object.keys(s.answers).forEach(k => {
+                        if (k.includes('滿意度') || k.includes('評分')) {
+                            const val = parseInt(s.answers[k]);
+                            if (!isNaN(val)) { r = val; }
+                        }
+                    });
+                }
+
+                if (r) {
+                    totalRating += r;
+                    ratingCount++;
+                    ratingHtml = `<div style="color:#d97706; font-size:0.85rem; margin-bottom:5px;">${'★'.repeat(r)}${'☆'.repeat(5-r)}</div>`;
+                }
+
+                // 處理推薦意願 (相容新舊格式)
+                let rec = s.recommend;
+                if (s.answers) {
+                    Object.keys(s.answers).forEach(k => {
+                        if (k.includes('推薦')) {
+                            if (s.answers[k].includes('願意')) rec = 'yes';
+                        }
+                    });
+                }
+                if (rec === 'yes') recommendYes++;
+
+                // 組合答案清單
+                let answersHtml = '';
+                if (s.answers) {
+                    answersHtml = Object.entries(s.answers).map(([q, a]) => `
+                        <div style="margin-bottom:8px;">
+                            <span style="color:var(--text-muted); font-size:0.8rem;">Q: ${q}</span><br>
+                            <span style="font-size:0.95rem;">${a || '(未填寫)'}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    // 舊資料格式
+                    answersHtml = `
+                        <p style="font-size:0.95rem;"><b>最喜歡：</b>${s.favoritePart || '無'}</p>
+                        <p style="font-size:0.95rem;"><b>建議：</b>${s.suggestions || '無'}</p>
+                    `;
+                }
+
+                return `
+                    <div style="background:#fdfbf7; border:1px solid #eee; border-radius:10px; padding:15px; margin-bottom:15px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid #f0f0f0; padding-bottom:8px;">
+                            <span style="font-weight:bold;">${s.userName}</span>
+                            <span style="font-size:0.75rem; color:#aaa;">${new Date(s.submittedAt).toLocaleDateString()}</span>
+                        </div>
+                        ${ratingHtml}
+                        ${answersHtml}
+                    </div>
+                `;
+            }).join('');
+
+            // 更新 UI
+            const avg = ratingCount > 0 ? (totalRating / ratingCount).toFixed(1) : "0.0";
+            document.getElementById('avgRating').textContent = avg;
+            document.getElementById('avgStars').innerHTML = '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg));
+            document.getElementById('totalResponses').textContent = data.length;
+            document.getElementById('recommendRate').textContent = `${Math.round((recommendYes / data.length) * 100)}%`;
+            document.getElementById('resultsDetailList').innerHTML = listHtml;
+
+        } catch (err) {
+            console.error("載入統計失敗:", err);
+            document.getElementById('resultsDetailList').innerHTML = '<p style="color:red; text-align:center; padding:20px;">載入數據失敗，請確認 Firebase Rules 是否已發布。</p>';
+        }
+    };
+
+    function renderEmptyStats() {
+        document.getElementById('avgRating').textContent = "0.0";
+        document.getElementById('avgStars').innerHTML = '☆☆☆☆☆';
+        document.getElementById('totalResponses').textContent = "0";
+        document.getElementById('recommendRate').textContent = "0%";
+        document.getElementById('resultsDetailList').innerHTML = '<p style="text-align:center; padding:40px; color:#aaa;">目前尚無問卷回饋數據。</p>';
+    }
+
+    // ==========================================
+    // 問卷設計 Modal 邏輯 (獨立於活動編輯)
+    // ==========================================
+    const surveyDesignModal = document.getElementById('surveyDesignModal');
+    const surveyDesignForm = document.getElementById('surveyDesignForm');
+    const closeSurveyBtns = document.querySelectorAll('.close-survey-modal, .close-survey-modal-btn');
+
+    closeSurveyBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            surveyDesignModal.style.display = 'none';
+        });
+    });
+
+    window.openSurveyDesign = function(eventId) {
+        const ev = events.find(e => e.id === eventId);
+        if (!ev) return;
+
+        document.getElementById('surveyEventId').value = eventId;
+        document.getElementById('surveyEventName').textContent = `活動：${ev.name}`;
+        
+        // 如果還沒設定過問卷，則預填入三項標準題目
+        if (!ev.surveyFields || ev.surveyFields.length === 0) {
+            currentEditingSurveyFields = [
+                { name: '您對本次活動的整體滿意度？', type: 'rating', required: true },
+                { name: '對本次活動的意見與建議', type: 'textarea', required: false },
+                { name: '您是否願意將此活動推薦給朋友？', type: 'yesno', required: true }
+            ];
+        } else {
+            currentEditingSurveyFields = JSON.parse(JSON.stringify(ev.surveyFields));
+        }
+        
+        renderSurveyFieldEditors();
+        surveyDesignModal.style.display = 'block';
+    };
+
+    surveyDesignForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const eventId = document.getElementById('surveyEventId').value;
+        const submitBtn = surveyDesignForm.querySelector('button[type="submit"]');
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 儲存中...';
+
+        try {
+            await db.collection('events').doc(eventId).update({
+                surveyFields: currentEditingSurveyFields.filter(f => f.name.trim() !== '')
+            });
+            
+            // 同步更新本地資料
+            const evIndex = events.findIndex(ev => ev.id === eventId);
+            if (evIndex !== -1) {
+                events[evIndex].surveyFields = currentEditingSurveyFields.filter(f => f.name.trim() !== '');
+            }
+
+            alert('問卷設計已儲存！');
+            surveyDesignModal.style.display = 'none';
+        } catch (err) {
+            console.error("儲存問卷失敗:", err);
+            alert("儲存失敗，請重試。");
+        }
+        
+        submitBtn.disabled = false;
+        submitBtn.textContent = '儲存問卷設定';
+    });
 
     eventEditForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -293,9 +529,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${regCount} / ${e.capacity} ${fullStr}</td>
                 <td><i class="far fa-eye"></i> ${e.views || 0}</td>
                 <td>${e.isActive ? '<span style="color:#10b981;">開放中</span>' : '<span style="color:#9ca3af;">已隱藏</span>'}</td>
-                <td>
-                    <button class="btn-primary" style="padding: 5px 10px; font-size: 0.85rem; margin-right: 5px;" onclick="editEvent('${e.id}')">編輯</button>
-                    <button class="btn-secondary" style="padding: 5px 10px; font-size: 0.85rem; border-color: #ef4444; color: #ef4444;" onclick="deleteEvent('${e.id}')">刪除</button>
+                <td style="white-space: nowrap;">
+                    <div style="display: flex; gap: 6px;">
+                        <button class="btn-action-edit" onclick="editEvent('${e.id}')" title="編輯活動">
+                            <i class="fas fa-edit"></i> 編輯
+                        </button>
+                        <button class="btn-action-survey" onclick="openSurveyDesign('${e.id}')" title="設計問卷">
+                            <i class="fas fa-poll-h"></i> 問卷
+                        </button>
+                        <button class="btn-action-results" onclick="openSurveyResults('${e.id}')" title="問卷統計結果" style="background: #f5f3ff; color: #7c3aed; border-color: #ede9fe;">
+                            <i class="fas fa-chart-pie"></i> 結果
+                        </button>
+                        <button class="btn-action-delete" onclick="deleteEvent('${e.id}')" title="刪除活動">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
             `;
@@ -332,7 +580,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editEventAutoPromote').checked = ev.autoPromote !== false;
         
         currentEditingCustomFields = ev.customFields ? JSON.parse(JSON.stringify(ev.customFields)) : [];
+        currentEditingSurveyFields = ev.surveyFields ? JSON.parse(JSON.stringify(ev.surveyFields)) : [];
         renderCustomFieldEditors();
+        renderSurveyFieldEditors();
 
         document.getElementById('eventModalTitle').textContent = '編輯活動';
         eventEditModal.style.display = 'block';
@@ -771,7 +1021,6 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const snapshot = await db.collection('event_surveys')
                     .where('eventId', '==', selectedId)
-                    .orderBy('submittedAt', 'desc')
                     .get();
 
                 if (snapshot.empty) {
@@ -781,20 +1030,43 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                const data = [];
+                let data = [];
                 snapshot.forEach(doc => data.push(doc.data()));
+                data.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
 
-                // 轉換為 CSV
-                const header = ["填寫時間", "姓名", "Email", "滿意度評分", "最喜歡的部分", "建議與留言", "推薦意願"];
-                const rows = data.map(s => [
-                    s.submittedAt,
-                    s.userName,
-                    s.userEmail,
-                    s.rating,
-                    `"${s.favoritePart.replace(/"/g, '""')}"`,
-                    `"${s.suggestions.replace(/"/g, '""')}"`,
-                    s.recommend === 'yes' ? '願意' : '考慮中'
-                ]);
+                // 動態獲取標題列：姓名、Email + 所有不重複的問題名稱
+                let dynamicHeaders = [];
+                data.forEach(s => {
+                    if (s.answers) {
+                        Object.keys(s.answers).forEach(k => {
+                            if (!dynamicHeaders.includes(k)) dynamicHeaders.push(k);
+                        });
+                    }
+                });
+
+                // 如果完全沒有 answers 欄位 (舊資料相容)，使用預設標題
+                if (dynamicHeaders.length === 0) {
+                    dynamicHeaders = ["滿意度評分", "最喜歡的部分", "建議與留言", "推薦意願"];
+                }
+
+                const header = ["填寫時間", "姓名", "Email", ...dynamicHeaders];
+                const rows = data.map(s => {
+                    const base = [s.submittedAt, s.userName, s.userEmail];
+                    const dynamicValues = dynamicHeaders.map(h => {
+                        let val = "";
+                        if (s.answers && s.answers[h] !== undefined) {
+                            val = s.answers[h];
+                        } else {
+                            // 舊資料相容性處理
+                            if (h === "滿意度評分") val = s.rating;
+                            else if (h === "最喜歡的部分") val = s.favoritePart;
+                            else if (h === "建議與留言") val = s.suggestions;
+                            else if (h === "推薦意願") val = s.recommend === 'yes' ? '願意' : '考慮中';
+                        }
+                        return `"${String(val).replace(/"/g, '""')}"`;
+                    });
+                    return [...base, ...dynamicValues];
+                });
 
                 let csvContent = "\uFEFF" + header.join(",") + "\n" + rows.map(r => r.join(",")).join("\n");
                 
