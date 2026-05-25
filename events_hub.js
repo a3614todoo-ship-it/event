@@ -22,6 +22,30 @@ const db = firebase.firestore();
 let allEvents = [];
 let allRegistrations = [];
 
+function getEventStartDate(eventData) {
+    return eventData?.startDate || eventData?.date || '';
+}
+
+function getEventEndDate(eventData) {
+    return eventData?.endDate || eventData?.startDate || eventData?.date || '';
+}
+
+function formatEventDateRange(eventData) {
+    const start = getEventStartDate(eventData);
+    const end = getEventEndDate(eventData);
+    if (!start) return '';
+    return end && end !== start ? `${start} ~ ${end}` : start;
+}
+
+function getFullCalendarEndDate(eventData) {
+    const end = getEventEndDate(eventData);
+    if (!end) return '';
+    const date = new Date(`${end}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return end;
+    date.setDate(date.getDate() + 1);
+    return date.toISOString().slice(0, 10);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('isStandaloneEventAdmin') === 'true') {
         const adminBtn = document.getElementById('adminQuickLink');
@@ -83,7 +107,9 @@ function initCalendar() {
     const events = allEvents.filter(e => e.isActive !== false).map(e => ({
         id: e.id,
         title: e.name,
-        start: e.date,
+        start: getEventStartDate(e),
+        end: getFullCalendarEndDate(e),
+        allDay: true,
         backgroundColor: 'var(--accent)',
         borderColor: 'var(--accent)',
         extendedProps: {
@@ -222,7 +248,7 @@ function generateEventCardHTML(e, isPopular = false) {
         <div class="event-info">
             <h3 style="${isPopular ? 'font-size: 1.5rem;' : ''}">${e.name}</h3>
             <ul class="event-meta">
-                <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;"><i class="far fa-calendar-alt"></i> ${e.date}</li>
+                <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;"><i class="far fa-calendar-alt"></i> ${formatEventDateRange(e)}</li>
                 <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;"><i class="far fa-clock"></i> ${e.time}</li>
                 <li style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;"><i class="fas fa-map-marker-alt"></i> ${e.location}</li>
                 <li style="margin-top:15px; color:var(--accent); font-weight:bold; display: flex; align-items: center; gap: 10px;">

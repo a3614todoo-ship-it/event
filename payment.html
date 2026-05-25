@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>回報匯款資訊 | 藝境空間</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
+    <style>
+        body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .payment-card { background: #ffffff; border-radius: 32px; max-width: 560px; width: 100%; padding: 44px; text-align: center; box-shadow: 0 40px 100px rgba(74, 55, 40, 0.1); border: 1px solid var(--border); }
+        .icon-box { width: 80px; height: 80px; background: #fefce8; border: 2px solid #f59e0b; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 30px; }
+        .event-info { background: #fdfbf7; padding: 20px; border-radius: 20px; border: 1px dashed var(--border); margin: 25px 0; text-align: left; }
+        .payment-row { display: flex; justify-content: space-between; gap: 14px; padding: 10px 0; border-bottom: 1px solid #efe8dd; }
+        .payment-row:last-child { border-bottom: 0; }
+        .payment-label { color: #8d7a6b; min-width: 94px; }
+        .payment-value { color: var(--text-main); font-weight: 700; text-align: right; white-space: pre-wrap; word-break: break-word; }
+        .copy-btn { border: 1px solid var(--border-color); background: #fff; color: var(--accent); border-radius: 999px; padding: 8px 14px; cursor: pointer; font-weight: 700; margin-top: 10px; }
+        .copy-btn:hover { border-color: var(--accent); box-shadow: 0 6px 16px rgba(217, 119, 6, 0.12); }
+        .payment-note { background: #fff7ed; color: #8a4b0f; padding: 14px 16px; border-radius: 14px; line-height: 1.7; margin-top: 16px; text-align: left; }
+        .form-group { text-align: left; margin-bottom: 25px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; color: var(--text-main); }
+        .form-group input { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); font-size: 1.1rem; text-align: center; font-family: monospace; letter-spacing: 2px; }
+        .form-group input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1); }
+        .btn-confirm { background: #10b981; color: white; border: none; padding: 18px; width: 100%; border-radius: 50px; font-weight: 700; cursor: pointer; transition: 0.3s; font-size: 1.1rem; margin-top: 10px; }
+        .btn-confirm:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2); }
+        .btn-back { background: transparent; border: none; color: var(--text-muted); margin-top: 20px; cursor: pointer; text-decoration: underline; font-size: 0.95rem; }
+    </style>
+</head>
+<body>
+
+    <div class="payment-card" id="mainCard">
+        <div id="loadingState">
+            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--accent);"></i>
+            <p style="margin-top: 20px;">讀取報名資訊中...</p>
+        </div>
+
+        <div id="formState" style="display: none;">
+            <div class="icon-box">
+                <i class="fas fa-money-check-alt" style="color: #f59e0b; font-size: 32px;"></i>
+            </div>
+            <h1 style="font-family: 'Noto Serif TC', serif; font-size: 2rem; margin-bottom: 15px;">回報匯款資訊</h1>
+            <p style="color: var(--text-muted); line-height: 1.6;">請輸入您匯款帳號的後五碼，以便我們核對帳款。</p>
+            
+            <div class="event-info">
+                <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: #8d7a6b;">活動資訊：</p>
+                <h3 id="eventName" style="margin: 0 0 5px 0; font-size: 1.2rem;">---</h3>
+                <div class="payment-row">
+                    <span class="payment-label">應繳金額</span>
+                    <span class="payment-value" id="eventFee">---</span>
+                </div>
+                <div class="payment-row">
+                    <span class="payment-label">繳費期限</span>
+                    <span class="payment-value" id="paymentDueAt">---</span>
+                </div>
+                <div class="payment-row">
+                    <span class="payment-label">匯款資訊</span>
+                    <span class="payment-value" id="bankInfo">---</span>
+                </div>
+                <button type="button" id="copyBankInfoBtn" class="copy-btn"><i class="fas fa-copy"></i> 複製匯款資訊</button>
+                <div id="paymentNote" class="payment-note" style="display: none;"></div>
+                <p id="regName" style="margin: 16px 0 0 0; color: var(--text-muted);">報名者：---</p>
+            </div>
+
+            <form id="paymentForm">
+                <div class="form-group">
+                    <label for="last5Digits">匯款帳號後五碼</label>
+                    <input type="text" id="last5Digits" maxlength="5" pattern="\d{5}" placeholder="例如：12345" required>
+                </div>
+                <button type="submit" id="submitBtn" class="btn-confirm">送出回報</button>
+            </form>
+            <button onclick="location.href='index.html'" class="btn-back">返回首頁</button>
+        </div>
+
+        <div id="successState" style="display: none;">
+            <div style="width: 80px; height: 80px; background: #f0fdf4; border: 2px solid #22c55e; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 30px;">
+                <i class="fas fa-check" style="color: #22c55e; font-size: 32px;"></i>
+            </div>
+            <h1 style="font-family: 'Noto Serif TC', serif; font-size: 2rem; margin-bottom: 15px;">回報成功！</h1>
+            <p style="color: var(--text-muted); line-height: 1.6; margin-bottom: 30px;">我們已收到您的匯款資訊。核對無誤後，系統將會寄出包含「報到 QR Code」的正式成功通知信，請耐心等候並留意您的信箱。</p>
+            <button onclick="location.href='index.html'" class="btn-primary" style="padding: 15px 40px; border-radius: 50px;">返回首頁</button>
+        </div>
+
+        <div id="errorState" style="display: none;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #f59e0b; margin-bottom: 20px;"></i>
+            <h2 style="font-family: 'Noto Serif TC', serif;">連結無效</h2>
+            <p id="errorMsg" style="color: var(--text-muted); margin-bottom: 30px;">找不到對應的報名紀錄，或該紀錄已處理完畢。</p>
+            <button onclick="location.href='index.html'" class="btn-secondary" style="padding: 12px 30px; border-radius: 50px;">返回首頁</button>
+        </div>
+    </div>
+
+    <script src="payment.js"></script>
+</body>
+</html>

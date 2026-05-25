@@ -169,6 +169,21 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentEditingCustomFields = [];
     let currentEditingSurveyFields = [];
 
+    function getEventStartDate(eventData) {
+        return eventData?.startDate || eventData?.date || '';
+    }
+
+    function getEventEndDate(eventData) {
+        return eventData?.endDate || eventData?.startDate || eventData?.date || '';
+    }
+
+    function formatEventDateRange(eventData) {
+        const start = getEventStartDate(eventData);
+        const end = getEventEndDate(eventData);
+        if (!start) return '';
+        return end && end !== start ? `${start} ~ ${end}` : start;
+    }
+
     closeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             eventEditModal.style.display = 'none';
@@ -179,10 +194,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editEventId').value = '';
         document.getElementById('editEventName').value = '';
         document.getElementById('editEventCapacity').value = '15';
-        document.getElementById('editEventDate').value = '';
+        document.getElementById('editEventStartDate').value = '';
+        document.getElementById('editEventEndDate').value = '';
         document.getElementById('editEventTime').value = '';
         document.getElementById('editEventLocation').value = '';
         document.getElementById('editEventDesc').value = '';
+        document.getElementById('editEventFee').value = '0';
+        document.getElementById('editEventBankInfo').value = '';
+        document.getElementById('editEventPaymentDueDays').value = '3';
+        document.getElementById('editEventPaymentNote').value = '';
         for (let i = 1; i <= 5; i++) {
             document.getElementById(`extName${i}`).value = '';
             document.getElementById(`extVal${i}`).value = '';
@@ -470,6 +490,14 @@ document.addEventListener('DOMContentLoaded', () => {
     eventEditForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('editEventId').value;
+        const startDate = document.getElementById('editEventStartDate').value;
+        const endDate = document.getElementById('editEventEndDate').value || startDate;
+
+        if (startDate && endDate && endDate < startDate) {
+            alert('結束日期不可早於開始日期。');
+            return;
+        }
+
         const extDetails = [];
         for (let i = 1; i <= 5; i++) {
             const name = document.getElementById(`extName${i}`).value.trim();
@@ -482,7 +510,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = {
             name: document.getElementById('editEventName').value.trim(),
             capacity: parseInt(document.getElementById('editEventCapacity').value) || 0,
-            date: document.getElementById('editEventDate').value,
+            date: startDate,
+            startDate: startDate,
+            endDate: endDate,
             time: document.getElementById('editEventTime').value.trim(),
             location: document.getElementById('editEventLocation').value.trim(),
             description: document.getElementById('editEventDesc').value.trim(),
@@ -491,7 +521,11 @@ document.addEventListener('DOMContentLoaded', () => {
             isActive: document.getElementById('editEventIsActive').checked,
             allowWaitlist: document.getElementById('editEventAllowWaitlist').checked,
             autoPromote: document.getElementById('editEventAutoPromote').checked,
-            customFields: currentEditingCustomFields.filter(f => f.name.trim() !== '')
+            customFields: currentEditingCustomFields.filter(f => f.name.trim() !== ''),
+            fee: parseInt(document.getElementById('editEventFee').value) || 0,
+            bankInfo: document.getElementById('editEventBankInfo').value.trim(),
+            paymentDueDays: parseInt(document.getElementById('editEventPaymentDueDays').value) || 3,
+            paymentNote: document.getElementById('editEventPaymentNote').value.trim()
         };
 
         try {
@@ -524,7 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return `
             <tr style="${e.isActive ? '' : 'opacity: 0.6;'}">
                 <td><strong><a href="details.html?id=${e.id}" target="_blank" style="color: var(--text-main); text-decoration: none; transition: color 0.3s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-main)'">${e.name} <i class="fas fa-external-link-alt" style="font-size: 0.8rem; margin-left: 5px; color: var(--text-muted);"></i></a></strong></td>
-                <td>${e.date} ${e.time}</td>
+                <td>${formatEventDateRange(e)} ${e.time}</td>
                 <td>${regCount} / ${e.capacity} ${fullStr}</td>
                 <td><i class="far fa-eye"></i> ${e.views || 0}</td>
                 <td>${e.isActive ? '<span style="color:#10b981;">開放中</span>' : '<span style="color:#9ca3af;">已隱藏</span>'}</td>
@@ -555,10 +589,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editEventId').value = ev.id;
         document.getElementById('editEventName').value = ev.name || '';
         document.getElementById('editEventCapacity').value = ev.capacity || '';
-        document.getElementById('editEventDate').value = ev.date || '';
+        document.getElementById('editEventStartDate').value = getEventStartDate(ev);
+        document.getElementById('editEventEndDate').value = getEventEndDate(ev);
         document.getElementById('editEventTime').value = ev.time || '';
         document.getElementById('editEventLocation').value = ev.location || '';
         document.getElementById('editEventDesc').value = ev.description || '';
+        document.getElementById('editEventFee').value = ev.fee || '0';
+        document.getElementById('editEventBankInfo').value = ev.bankInfo || '';
+        document.getElementById('editEventPaymentDueDays').value = ev.paymentDueDays || '3';
+        document.getElementById('editEventPaymentNote').value = ev.paymentNote || '';
         
         for (let i = 1; i <= 5; i++) {
             document.getElementById(`extName${i}`).value = '';
@@ -598,12 +637,54 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     const checkinSelect = document.getElementById('checkinEventSelect');
     const checkinSearch = document.getElementById('checkinSearchInput');
+    const paymentStatusFilter = document.getElementById('paymentStatusFilter');
+    const batchConfirmPaymentBtn = document.getElementById('batchConfirmPaymentBtn');
+    const sendPaymentRemindersBtn = document.getElementById('sendPaymentRemindersBtn');
+    const selectedPaymentIds = new Set();
+
+    function formatDateTimeTW(isoString) {
+        if (!isoString) return '未設定';
+        const date = new Date(isoString);
+        if (Number.isNaN(date.getTime())) return '未設定';
+        return date.toLocaleString('zh-TW', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+    }
+
+    function isPaymentOverdue(reg) {
+        if ((reg.status || '').toLowerCase() !== 'pending_payment' || !reg.paymentDueAt) return false;
+        const dueAt = new Date(reg.paymentDueAt);
+        return !Number.isNaN(dueAt.getTime()) && dueAt.getTime() < Date.now();
+    }
+
+    function buildPaymentDueAt(eventData) {
+        const days = Math.max(parseInt(eventData?.paymentDueDays, 10) || 3, 1);
+        const dueAt = new Date();
+        dueAt.setDate(dueAt.getDate() + days);
+        dueAt.setHours(23, 59, 59, 999);
+        return dueAt.toISOString();
+    }
+
+    function expireOverduePayments(list) {
+        list.filter(isPaymentOverdue).forEach(r => {
+            db.collection('event_registrations').doc(r.id).update({
+                status: 'payment_expired',
+                paymentExpiredAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).catch(err => console.warn('更新逾期付款狀態失敗:', err));
+            r.status = 'payment_expired';
+        });
+    }
 
     function updateCheckinSelect() {
         if (!checkinSelect) return;
         const currentVal = checkinSelect.value;
         checkinSelect.innerHTML = '<option value="">請選擇活動...</option>' + events.map(e => 
-            `<option value="${e.id}">${e.name} (${e.date})</option>`
+            `<option value="${e.id}">${e.name} (${formatEventDateRange(e)})</option>`
         ).join('');
         if (currentVal && events.find(e => e.id === currentVal)) {
             checkinSelect.value = currentVal;
@@ -616,17 +697,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const selectedId = checkinSelect.value;
         if (!selectedId) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">請先選擇一個活動</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">請先選擇一個活動</td></tr>';
             document.getElementById('checkinCount').textContent = '0';
             document.getElementById('checkinCapacity').textContent = '0';
+            if (batchConfirmPaymentBtn) batchConfirmPaymentBtn.style.display = 'none';
             return;
         }
 
         const ev = events.find(e => e.id === selectedId);
         let list = eventRegistrations.filter(r => r.eventId === selectedId);
+        expireOverduePayments(list);
         
         const capacity = ev ? parseInt(ev.capacity) || 0 : 0;
-        const activeRegs = list.filter(r => r.status === 'registered' || r.status === 'checked-in');
+        const activeRegs = list.filter(r => ['registered', 'checked-in', 'pending_payment', 'payment_reported'].includes(r.status));
         const checkedInCount = list.filter(r => r.status === 'checked-in').length;
         const availableSpots = capacity - activeRegs.length;
 
@@ -647,8 +730,26 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         }
 
+        const filterValue = paymentStatusFilter ? paymentStatusFilter.value : 'all';
+        if (filterValue !== 'all') {
+            list = list.filter(r => {
+                const s = (r.status || '').toLowerCase().trim();
+                if (filterValue === 'paid') return s === 'registered' || s === 'checked-in';
+                return s === filterValue;
+            });
+        }
+
+        const visibleReportedIds = list.filter(r => (r.status || '').toLowerCase().trim() === 'payment_reported').map(r => r.id);
+        selectedPaymentIds.forEach(id => {
+            if (!visibleReportedIds.includes(id)) selectedPaymentIds.delete(id);
+        });
+        if (batchConfirmPaymentBtn) {
+            batchConfirmPaymentBtn.style.display = selectedPaymentIds.size > 0 ? 'inline-flex' : 'none';
+            batchConfirmPaymentBtn.innerHTML = `<i class="fas fa-check-double"></i> 批次確認收款 (${selectedPaymentIds.size})`;
+        }
+
         if (list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">沒有符合條件的名單</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">沒有符合條件的名單</td></tr>';
             return;
         }
 
@@ -659,23 +760,61 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         let promoteCount = 0;
+        const reportedLast5Counts = list.reduce((acc, item) => {
+            if ((item.status || '').toLowerCase().trim() === 'payment_reported' && item.paymentLast5) {
+                acc[item.paymentLast5] = (acc[item.paymentLast5] || 0) + 1;
+            }
+            return acc;
+        }, {});
+
         tbody.innerHTML = list.map(r => {
+            const ev = events.find(e => e.id === r.eventId);
+            const isPaidEvent = ev && ev.fee > 0;
+            
             let statusDisplay = `<span style="color:#9ca3af;">未知 (${r.status || '無'})</span>`;
+            let paymentDisplay = isPaidEvent ? '<span style="color:#9ca3af;">-</span>' : '<span style="color:#10b981;">免費</span>';
+            let paymentActionDisplay = r.paymentLast5 ? `<span style="font-family:monospace; font-weight:bold; color:var(--accent);">${r.paymentLast5}</span>` : '<span style="color:var(--text-muted);">-</span>';
             let actionBtn = '';
+            
             const serialNo = (r.id || '').substring(0, 8).toUpperCase();
             const s = (r.status || '').toLowerCase().trim();
+            const dueText = r.paymentDueAt ? `<div style="font-size:0.75rem; color:#8d7a6b; margin-top:4px;">期限：${formatDateTimeTW(r.paymentDueAt)}</div>` : '';
+            const duplicateLast5Warning = r.paymentLast5 && reportedLast5Counts[r.paymentLast5] > 1
+                ? '<div style="font-size:0.75rem; color:#ef4444; margin-top:4px;">同活動後五碼重複，請核對姓名與金額</div>'
+                : '';
 
-            if (s === 'checked-in') {
+            if (s === 'pending_payment') {
+                statusDisplay = '<span style="color:var(--text-muted);">等待繳費中</span>';
+                paymentDisplay = `<span style="color:#ef4444; font-weight:bold;">待付款</span>${dueText}`;
+                actionBtn = `<button class="btn-secondary" style="padding:4px 10px; font-size:0.85rem; color:#ef4444; border-color:#ef4444;" onclick="cancelRegistration('${r.id}')">取消報名</button>`;
+            } else if (s === 'payment_reported') {
+                statusDisplay = '<span style="color:#f59e0b; font-weight:bold;">等待對帳</span>';
+                paymentDisplay = `<span style="color:#f59e0b; font-weight:bold;">已回報</span>${dueText}`;
+                paymentActionDisplay = `<label style="display:inline-flex; align-items:center; gap:5px; margin-right:6px;"><input type="checkbox" ${selectedPaymentIds.has(r.id) ? 'checked' : ''} onchange="togglePaymentSelection('${r.id}', this.checked)"> ${paymentActionDisplay}</label>`;
+                paymentActionDisplay += ` <button class="btn-primary" style="padding:2px 8px; font-size:0.75rem; background:#10b981; border:none; margin-left:5px; margin-top:3px;" onclick="confirmPayment('${r.id}', '${r.eventId}')">確認收款</button>`;
+                paymentActionDisplay += duplicateLast5Warning;
+                actionBtn = `<button class="btn-secondary" style="padding:4px 10px; font-size:0.85rem; color:#ef4444; border-color:#ef4444;" onclick="cancelRegistration('${r.id}')">取消報名</button>`;
+            } else if (s === 'payment_expired') {
+                statusDisplay = '<span style="color:#ef4444; font-weight:bold;">繳費逾期</span>';
+                paymentDisplay = `<span style="color:#ef4444; font-weight:bold;">已逾期</span>${dueText}`;
+                actionBtn = `
+                    <button class="btn-primary" style="padding:4px 10px; font-size:0.85rem; background:#d97706; border:none; margin-right:5px;" onclick="reopenPayment('${r.id}', '${r.eventId}')">重開繳費</button>
+                    <button class="btn-secondary" style="padding:4px 10px; font-size:0.85rem; color:#ef4444; border-color:#ef4444;" onclick="cancelRegistration('${r.id}')">取消紀錄</button>
+                `;
+            } else if (s === 'checked-in') {
                 statusDisplay = '<span style="color:#10b981; font-weight:bold;">已報到</span>';
+                if (isPaidEvent) paymentDisplay = '<span style="color:#10b981; font-weight:bold;">已收款</span>';
                 actionBtn = `<button class="btn-secondary" style="padding:4px 10px; font-size:0.85rem;" onclick="toggleCheckin('${r.id}', 'registered')">取消報到</button>`;
             } else if (s === 'registered') {
                 statusDisplay = '<span style="color:var(--text-muted);">未報到</span>';
+                if (isPaidEvent) paymentDisplay = '<span style="color:#10b981; font-weight:bold;">已收款</span>';
                 actionBtn = `
                     <button class="btn-primary" style="padding:4px 10px; font-size:0.85rem; background:#10b981; border:none; margin-right:5px;" onclick="toggleCheckin('${r.id}', 'checked-in')">報到</button>
                     <button class="btn-secondary" style="padding:4px 10px; font-size:0.85rem; color:#ef4444; border-color:#ef4444;" onclick="cancelRegistration('${r.id}')">取消參加</button>
                 `;
             } else if (s === 'waiting' || s === 'waitlist') {
                 statusDisplay = '<span style="color:#f59e0b; font-weight:bold;">候補中</span>';
+                if (isPaidEvent) paymentDisplay = '<span style="color:var(--text-muted);">尚未繳費</span>';
                 if (availableSpots > promoteCount) {
                     promoteCount++;
                     actionBtn = `
@@ -690,6 +829,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else if (s === 'cancelled') {
                 statusDisplay = '<span style="color:#9ca3af;">已取消</span>';
+                if (isPaidEvent) paymentDisplay = '<span style="color:#9ca3af;">-</span>';
                 actionBtn = `<span style="color:#9ca3af; font-size:0.85rem;">無操作</span>`;
             }
 
@@ -700,6 +840,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${r.userPhone}</td>
                 <td style="font-size:0.85rem; color:var(--text-muted);">${new Date(r.timestamp).toLocaleString('zh-TW')}</td>
                 <td>${statusDisplay}</td>
+                <td>${paymentDisplay}</td>
+                <td>${paymentActionDisplay}</td>
                 <td>${actionBtn}</td>
             </tr>
             `;
@@ -708,10 +850,211 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (checkinSelect) checkinSelect.addEventListener('change', renderCheckinList);
     if (checkinSearch) checkinSearch.addEventListener('input', renderCheckinList);
+    if (paymentStatusFilter) paymentStatusFilter.addEventListener('change', renderCheckinList);
+
+    window.togglePaymentSelection = function(regId, checked) {
+        if (checked) {
+            selectedPaymentIds.add(regId);
+        } else {
+            selectedPaymentIds.delete(regId);
+        }
+        renderCheckinList();
+    };
 
     window.toggleCheckin = function(regId, newStatus) {
         db.collection('event_registrations').doc(regId).update({ status: newStatus });
     };
+
+    window.confirmPayment = function(regId, eventId) {
+        if (confirm("確認已收到款項？系統將會更改狀態為「已收款」，並自動寄送包含 QR Code 的正式報名成功信件給參加者。")) {
+            const userReg = eventRegistrations.find(r => r.id === regId);
+            const ev = events.find(e => e.id === eventId);
+            db.collection('event_registrations').doc(regId).update({
+                status: 'registered',
+                paymentConfirmedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                if (userReg && ev) sendPaymentSuccessEmail(userReg, ev);
+                alert("已確認收款，正式報名憑證信件已寄出！");
+            }).catch(err => {
+                console.error("更新狀態失敗:", err);
+                alert("更新狀態失敗，請重試");
+            });
+        }
+    };
+
+    window.reopenPayment = function(regId, eventId) {
+        const ev = events.find(e => e.id === eventId);
+        const userReg = eventRegistrations.find(r => r.id === regId);
+        if (!ev || !userReg) {
+            alert('找不到活動或報名資料，請重新整理後再試。');
+            return;
+        }
+        if (!confirm(`確定要重新開放 ${userReg.userName} 的繳費期限？系統會重新計算期限並寄出繳費提醒。`)) return;
+
+        const paymentDueAt = buildPaymentDueAt(ev);
+        db.collection('event_registrations').doc(regId).update({
+            status: 'pending_payment',
+            paymentDueAt,
+            paymentReopenedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+            return sendPaymentReminderEmail({ ...userReg, status: 'pending_payment', paymentDueAt }, ev, true);
+        }).then(() => {
+            alert('已重開繳費期限並寄出提醒信。');
+        }).catch(err => {
+            console.error('重開繳費失敗:', err);
+            alert('重開繳費失敗，請稍後再試。');
+        });
+    };
+
+    if (batchConfirmPaymentBtn) {
+        batchConfirmPaymentBtn.addEventListener('click', async () => {
+            const ids = Array.from(selectedPaymentIds);
+            if (ids.length === 0) return;
+            if (!confirm(`確認已收到這 ${ids.length} 筆款項？系統會批次改為正式報名並寄出 QR Code 信件。`)) return;
+
+            batchConfirmPaymentBtn.disabled = true;
+            batchConfirmPaymentBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+
+            try {
+                for (const regId of ids) {
+                    const userReg = eventRegistrations.find(r => r.id === regId);
+                    const ev = events.find(e => e.id === userReg?.eventId);
+                    await db.collection('event_registrations').doc(regId).update({
+                        status: 'registered',
+                        paymentConfirmedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    if (userReg && ev) await sendPaymentSuccessEmail(userReg, ev);
+                }
+                selectedPaymentIds.clear();
+                alert('批次確認收款完成，正式報名憑證信件已寄出。');
+                renderCheckinList();
+            } catch (err) {
+                console.error('批次確認收款失敗:', err);
+                alert('批次確認收款失敗，請稍後再試。');
+            } finally {
+                batchConfirmPaymentBtn.disabled = false;
+                renderCheckinList();
+            }
+        });
+    }
+
+    if (sendPaymentRemindersBtn) {
+        sendPaymentRemindersBtn.addEventListener('click', async () => {
+            const selectedId = checkinSelect ? checkinSelect.value : '';
+            if (!selectedId) {
+                alert('請先選擇活動。');
+                return;
+            }
+            const ev = events.find(e => e.id === selectedId);
+            const list = eventRegistrations.filter(r => r.eventId === selectedId && r.status === 'pending_payment');
+            if (list.length === 0) {
+                alert('目前沒有待繳費名單需要提醒。');
+                return;
+            }
+            if (!confirm(`確定要寄送繳費提醒給這 ${list.length} 位待繳費參加者嗎？`)) return;
+
+            sendPaymentRemindersBtn.disabled = true;
+            sendPaymentRemindersBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 寄送中...';
+            try {
+                for (const reg of list) {
+                    await sendPaymentReminderEmail(reg, ev, false);
+                    await db.collection('event_registrations').doc(reg.id).update({
+                        paymentReminderSentAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+                alert('繳費提醒已寄出。');
+            } catch (err) {
+                console.error('寄送繳費提醒失敗:', err);
+                alert('寄送繳費提醒失敗，請稍後再試。');
+            } finally {
+                sendPaymentRemindersBtn.disabled = false;
+                sendPaymentRemindersBtn.innerHTML = '<i class="fas fa-envelope"></i> 繳費提醒';
+            }
+        });
+    }
+
+    function sendPaymentReminderEmail(regData, eventData, isReopen) {
+        if (typeof emailjs === 'undefined') return Promise.resolve();
+        const actionText = isReopen ? '已重新開放繳費期限' : '提醒您完成繳費';
+        const emailHtml = `
+        <div style="background-color:#f5f1ea; padding:40px 20px; font-family:system-ui,-apple-system,sans-serif;">
+            <div style="max-width:600px; margin:0 auto; background:#fdfbf7; border-radius:24px; overflow:hidden; border:1px solid #e5e0d8;">
+                <div style="background:#fff; padding:40px 20px; text-align:center; border-bottom:1px solid #f1ece4;">
+                    <h1 style="margin:0; font-size:26px; color:#4a3728; letter-spacing:6px;">藝 境 空 間</h1>
+                    <p style="margin:10px 0 0 0; color:#d97706; letter-spacing:2px;">Payment Reminder</p>
+                </div>
+                <div style="padding:38px; color:#4a3728; line-height:1.8;">
+                    <p>親愛的 <strong>${regData.userName}</strong> 您好，</p>
+                    <p>${actionText}：您報名的 <strong style="color:#d97706;">${eventData.name}</strong> 目前仍為待繳費狀態。</p>
+                    <div style="background:#fff; border:1px solid #eee; border-radius:14px; padding:20px; margin:20px 0;">
+                        <p style="margin:0 0 8px 0;"><strong>應繳金額：</strong>NT$ ${(eventData.fee || 0).toLocaleString()}</p>
+                        <p style="margin:0 0 8px 0;"><strong>繳費期限：</strong>${formatDateTimeTW(regData.paymentDueAt)}</p>
+                        <p style="margin:0;"><strong>匯款資訊：</strong></p>
+                        <div style="white-space:pre-wrap; font-family:monospace; color:#6b5a4d;">${eventData.bankInfo || '請依主辦單位提供資訊辦理'}</div>
+                        ${eventData.paymentNote ? `<p style="margin:12px 0 0 0; color:#8a4b0f;"><strong>備註：</strong>${eventData.paymentNote}</p>` : ''}
+                    </div>
+                    <div style="text-align:center;">
+                        <a href="https://a3614todoo-ship-it.github.io/event/payment.html?id=${regData.id}" style="display:inline-block; padding:12px 24px; background:#d97706; color:#fff; text-decoration:none; border-radius:10px; font-weight:bold;">回報匯款後五碼</a>
+                    </div>
+                    <p style="font-size:13px; color:#8d7a6b; margin-top:24px;">若您已完成回報，請忽略此信。藝境空間 管理團隊 敬上</p>
+                </div>
+            </div>
+        </div>`;
+
+        return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+            to_email: regData.userEmail,
+            to_name: regData.userName,
+            subject: `【繳費提醒】${eventData.name}`,
+            message_html: emailHtml
+        });
+    }
+
+    async function sendPaymentSuccessEmail(regData, eventData) {
+        const mainFont = 'system-ui, -apple-system, sans-serif';
+        const primaryBg = '#fdfbf7';
+        const accentColor = '#d97706';
+        const textMain = '#4a3728';
+
+        const emailHtml = `
+        <div style="background-color: #f5f1ea; padding: 40px 20px; font-family: ${mainFont};">
+            <div style="max-width: 600px; margin: 0 auto; background-color: ${primaryBg}; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 30px rgba(74, 55, 40, 0.1); border: 1px solid #e5e0d8;">
+                <div style="background: #ffffff; padding: 45px 20px; text-align: center; border-bottom: 1px solid #f1ece4;">
+                    <h1 style="margin: 0; font-size: 26px; color: ${textMain}; letter-spacing: 6px; font-weight: bold;">藝 境 空 間</h1>
+                    <p style="margin: 10px 0 0 0; font-size: 14px; color: ${accentColor}; letter-spacing: 2px; text-transform: uppercase;">Payment Confirmed</p>
+                </div>
+                <div style="padding: 40px; line-height: 1.8; color: ${textMain};">
+                    <p style="margin-bottom: 20px; font-size: 16px;">親愛的 <strong>${regData.userName}</strong> 您好，</p>
+                    <p style="margin-bottom: 25px;">我們已經收到您的款項，您的活動 <strong style="color: ${accentColor};">${eventData.name}</strong> 報名已正式成功！</p>
+                    
+                    <div style="background-color: #ffffff; padding: 25px; border-radius: 16px; border: 1px solid #eee; margin-bottom: 30px;">
+                        <h3 style="margin: 0 0 15px 0; font-size: 18px; color: ${textMain}; border-bottom: 2px solid ${accentColor}; display: inline-block; padding-bottom: 5px;">📅 活動資訊</h3>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 15px;">
+                            <tr><td style="padding: 8px 0; color: #8d7a6b; width: 100px;">日期</td><td style="padding: 8px 0; font-weight: bold;">${formatEventDateRange(eventData)}</td></tr>
+                            <tr><td style="padding: 8px 0; color: #8d7a6b;">時間</td><td style="padding: 8px 0; font-weight: bold;">${eventData.time}</td></tr>
+                            <tr><td style="padding: 8px 0; color: #8d7a6b;">地點</td><td style="padding: 8px 0; font-weight: bold;">${eventData.location}</td></tr>
+                        </table>
+                    </div>
+
+                    <div style="text-align: center; background: #ffffff; padding: 30px; border-radius: 16px; border: 1px dashed #d97706; margin-bottom: 30px;">
+                        <p style="margin: 0 0 15px 0; font-size: 15px; font-weight: bold; color: #d97706;">📌 您的報到憑證</p>
+                        <img src="https://quickchart.io/chart?cht=qr&chs=180x180&chl=${regData.id}&choe=UTF-8" width="180" height="180" alt="QR Code" style="display: block; margin: 0 auto;">
+                        <p style="margin: 15px 0 0 0; font-size: 14px; color: #4a3728;">請於抵達現場時<strong>出示此 QR Code 報到</strong></p>
+                    </div>
+
+                    <div style="text-align: center; border-top: 1px solid #f1ece4; padding-top: 30px; margin-top: 20px;">
+                        <h4 style="margin: 0; font-size: 18px; color: ${textMain};">非常感謝您的參與！</h4>
+                        <p style="margin: 10px 0 0 0; font-size: 13px; color: #bcae9e;">藝境空間 管理團隊 敬上</p>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+        return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { 
+            to_email: regData.userEmail, 
+            subject: `【收款確認】${eventData.name} 報名成功！`, 
+            message_html: emailHtml 
+        });
+    }
 
     window.cancelRegistration = function(regId) {
         if (confirm("確定取消此報名？將會寄出取消通知信。")) {
@@ -910,7 +1253,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="background-color: #ffffff; padding: 25px; border-radius: 16px; border: 1px solid #eee; margin-bottom: 30px;">
                         <h3 style="margin: 0 0 15px 0; font-size: 18px; color: ${textMain}; border-bottom: 2px solid ${accentColor}; display: inline-block; padding-bottom: 5px;">📅 活動資訊回顧</h3>
                         <table style="width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 15px;">
-                            <tr><td style="padding: 8px 0; color: #8d7a6b; width: 100px;">日期</td><td style="padding: 8px 0; font-weight: bold;">${eventData.date}</td></tr>
+                            <tr><td style="padding: 8px 0; color: #8d7a6b; width: 100px;">日期</td><td style="padding: 8px 0; font-weight: bold;">${formatEventDateRange(eventData)}</td></tr>
                             <tr><td style="padding: 8px 0; color: #8d7a6b;">時間</td><td style="padding: 8px 0; font-weight: bold;">${eventData.time}</td></tr>
                             <tr><td style="padding: 8px 0; color: #8d7a6b;">地點</td><td style="padding: 8px 0; font-weight: bold;">${eventData.location}</td></tr>
                         </table>
@@ -1363,7 +1706,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <table style="width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 15px;">
                             <tr><td style="padding: 10px 0; color: #8d7a6b; width: 100px;">目前狀態</td><td style="padding: 10px 0; font-weight: bold; color: ${accentColor};">報名成功 (Confirmed)</td></tr>
                             <tr><td style="padding: 10px 0; color: #8d7a6b;">活動名稱</td><td style="padding: 10px 0; font-weight: bold;">${eventData.name}</td></tr>
-                            <tr><td style="padding: 10px 0; color: #8d7a6b;">活動日期</td><td style="padding: 10px 0; font-weight: bold;">${eventData.date}</td></tr>
+                            <tr><td style="padding: 10px 0; color: #8d7a6b;">活動日期</td><td style="padding: 10px 0; font-weight: bold;">${formatEventDateRange(eventData)}</td></tr>
                             <tr><td style="padding: 10px 0; color: #8d7a6b;">活動時間</td><td style="padding: 10px 0; font-weight: bold;">${eventData.time}</td></tr>
                             <tr><td style="padding: 10px 0; color: #8d7a6b;">報名序號</td><td style="padding: 10px 0; font-family: monospace; font-size: 18px; color: ${textMain};">${(regData.id || '').substring(0, 8).toUpperCase()}</td></tr>
                         </table>
@@ -1424,7 +1767,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <table style="width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 15px;">
                             <tr><td style="padding: 10px 0; color: #8d7a6b; width: 100px;">目前狀態</td><td style="padding: 10px 0; font-weight: bold; color: ${accentColor};">已取消參加</td></tr>
                             <tr><td style="padding: 10px 0; color: #8d7a6b;">活動名稱</td><td style="padding: 10px 0; font-weight: bold;">${eventData.name}</td></tr>
-                            <tr><td style="padding: 10px 0; color: #8d7a6b;">活動日期</td><td style="padding: 10px 0; font-weight: bold;">${eventData.date}</td></tr>
+                            <tr><td style="padding: 10px 0; color: #8d7a6b;">活動日期</td><td style="padding: 10px 0; font-weight: bold;">${formatEventDateRange(eventData)}</td></tr>
                         </table>
                     </div>
                     <div style="text-align: center; border-top: 1px solid #f1ece4; padding-top: 30px; margin-top: 20px;">

@@ -46,7 +46,7 @@ async function init() {
                     showState('error');
                 } else {
                     document.getElementById('eventName').textContent = registrationData.eventName;
-                    document.getElementById('eventTime').textContent = `${registrationData.eventDate} ${registrationData.eventTime}`;
+                    document.getElementById('eventTime').textContent = `${registrationData.eventDateRange || registrationData.eventDate} ${registrationData.eventTime}`;
                     showState('confirm');
                 }
             } else {

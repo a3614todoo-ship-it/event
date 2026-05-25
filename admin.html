@@ -149,7 +149,19 @@
                         <label style="display: block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9rem;">快速搜尋</label>
                         <input type="text" id="checkinSearchInput" placeholder="輸入姓名或電話搜尋..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
                     </div>
+                    <div style="flex: 1; min-width: 220px;">
+                        <label style="display: block; margin-bottom: 5px; color: var(--text-muted); font-size: 0.9rem;">付款狀態</label>
+                        <select id="paymentStatusFilter" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                            <option value="all">全部名單</option>
+                            <option value="pending_payment">待繳費</option>
+                            <option value="payment_reported">已回報待對帳</option>
+                            <option value="payment_expired">已逾期</option>
+                            <option value="paid">已收款</option>
+                        </select>
+                    </div>
                     <div style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
+                        <button id="batchConfirmPaymentBtn" class="btn-primary" style="height: 42px; background: #10b981; display: none;"><i class="fas fa-check-double"></i> 批次確認收款</button>
+                        <button id="sendPaymentRemindersBtn" class="btn-secondary" style="height: 42px; border-color: #d97706; color: #d97706;"><i class="fas fa-envelope"></i> 繳費提醒</button>
                         <button id="openScannerBtn" class="btn-primary" style="height: 42px; background: #6366f1;"><i class="fas fa-qrcode"></i> 掃描報到</button>
                         <button id="sendRemindersBtn" class="btn-secondary" style="height: 42px; border-color: #6366f1; color: #6366f1;"><i class="fas fa-paper-plane"></i> 發送提醒</button>
                         <button id="sendSurveysBtn" class="btn-secondary" style="height: 42px; border-color: #10b981; color: #10b981;"><i class="fas fa-poll-h"></i> 發送問卷</button>
@@ -178,11 +190,13 @@
                                 <th>聯絡電話</th>
                                 <th>報名時間</th>
                                 <th>狀態</th>
+                                <th>繳費狀態</th>
+                                <th>後五碼/操作</th>
                                 <th>操作</th>
                             </tr>
                         </thead>
                         <tbody id="checkinListBody">
-                            <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">請先選擇一個活動</td></tr>
+                            <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">請先選擇一個活動</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -283,8 +297,12 @@
                 
                 <div class="form-row" style="display: flex; gap: 15px; margin-bottom: 15px;">
                     <div class="form-group" style="flex: 1;">
-                        <label>日期 *</label>
-                        <input type="date" id="editEventDate" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <label>開始日期 *</label>
+                        <input type="date" id="editEventStartDate" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>結束日期 *</label>
+                        <input type="date" id="editEventEndDate" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
                     </div>
                     <div class="form-group" style="flex: 1;">
                         <label>時間區間 *</label>
@@ -295,6 +313,32 @@
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label>活動地點 *</label>
                     <input type="text" id="editEventLocation" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>封面圖片路徑 <span style="font-size:0.8rem; color:var(--text-muted);">(建議放 assets/ 裡，例如 assets/hero_events_bg.png)</span></label>
+                    <input type="text" id="editEventImage" placeholder="例如：assets/hero_events_bg.png" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                </div>
+
+                <div class="form-row" style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>活動費用 (NT$)</label>
+                        <input type="number" id="editEventFee" placeholder="輸入 0 則為免費活動" min="0" value="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>繳費期限 (天)</label>
+                        <input type="number" id="editEventPaymentDueDays" placeholder="例如：3" min="1" value="3" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>匯款帳號資訊 <span style="font-size:0.8rem; color:var(--text-muted);">(可只填帳號後五碼或完整帳號，不需填戶名)</span></label>
+                    <textarea id="editEventBankInfo" placeholder="例如：銀行代碼 000，帳號後五碼 12345" rows="3" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);"></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>付款備註 <span style="font-size:0.8rem; color:var(--text-muted);">(顯示於繳費通知與回報頁)</span></label>
+                    <textarea id="editEventPaymentNote" placeholder="例如：匯款後請於本頁回報帳號後五碼，保留名額將依繳費期限處理。" rows="3" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);"></textarea>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 15px;">
@@ -327,11 +371,6 @@
                             <input type="text" id="extVal5" placeholder="內容" style="flex: 2;">
                         </div>
                     </div>
-                </div>
-
-                <div class="form-group" style="margin-top: 15px;">
-                    <label>封面圖片路徑</label>
-                    <input type="text" id="editEventImage">
                 </div>
 
                 <div style="display: flex; gap: 15px; margin-top: 20px; flex-wrap: wrap;">

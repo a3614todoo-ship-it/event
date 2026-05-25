@@ -35,6 +35,61 @@ const utmSource = urlParams.get('utm_source') || 'direct';
 const utmMedium = urlParams.get('utm_medium') || '';
 const utmCampaign = urlParams.get('utm_campaign') || '';
 
+function formatDateTimeTW(isoString) {
+    if (!isoString) return '未設定';
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) return '未設定';
+    return date.toLocaleString('zh-TW', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
+}
+
+function getEventStartDate(eventData) {
+    return eventData?.startDate || eventData?.date || '';
+}
+
+function getEventEndDate(eventData) {
+    return eventData?.endDate || eventData?.startDate || eventData?.date || '';
+}
+
+function formatEventDateRange(eventData) {
+    const start = getEventStartDate(eventData);
+    const end = getEventEndDate(eventData);
+    if (!start) return '';
+    return end && end !== start ? `${start} ~ ${end}` : start;
+}
+
+function formatCalendarDate(dateValue) {
+    return (dateValue || '').replace(/-/g, '');
+}
+
+function getEventEndDateForCalendar(eventData) {
+    return getEventEndDate(eventData) || getEventStartDate(eventData);
+}
+
+function buildPaymentDueAt(eventData) {
+    const days = Math.max(parseInt(eventData?.paymentDueDays, 10) || 3, 1);
+    const dueAt = new Date();
+    dueAt.setDate(dueAt.getDate() + days);
+    dueAt.setHours(23, 59, 59, 999);
+    return dueAt.toISOString();
+}
+
+function copyTextToClipboard(text, successMessage = '已複製到剪貼簿') {
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => alert(successMessage)).catch(() => {
+            prompt('請手動複製以下資訊：', text);
+        });
+    } else {
+        prompt('請手動複製以下資訊：', text);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('isStandaloneEventAdmin') === 'true') {
         const adminBtn = document.getElementById('adminQuickLink');
@@ -78,7 +133,7 @@ async function loadEventData() {
         db.collection("event_registrations").where("eventId", "==", eventId).onSnapshot((snapshot) => {
             let list = [];
             snapshot.forEach(d => list.push(d.data()));
-            registrationsCount = list.filter(r => r.status !== 'cancelled').length;
+            registrationsCount = list.filter(r => r.status !== 'cancelled' && r.status !== 'payment_expired').length;
             
             const cap = currentEvent ? (parseInt(currentEvent.capacity) || 0) : 0;
             const allowWaitlist = currentEvent ? currentEvent.allowWaitlist !== false : true;
@@ -150,9 +205,19 @@ async function loadEventData() {
 function renderUI() {
     document.title = `${currentEvent.name} | 藝境空間`;
     document.getElementById('eventName').textContent = currentEvent.name;
-    document.getElementById('eventDate').textContent = currentEvent.date;
+    document.getElementById('eventDate').textContent = formatEventDateRange(currentEvent);
     document.getElementById('eventTime').textContent = currentEvent.time;
     document.getElementById('eventLocation').textContent = currentEvent.location;
+    
+    const feeEl = document.getElementById('eventFee');
+    if (feeEl) {
+        if (currentEvent.fee > 0) {
+            feeEl.textContent = `NT$ ${currentEvent.fee.toLocaleString()}`;
+        } else {
+            feeEl.textContent = '免費';
+        }
+    }
+
     document.getElementById('eventDescription').innerHTML = (currentEvent.description || '暫無說明').replace(/\n/g, '<br>');
     
     // 處理擴充詳細資訊
@@ -308,7 +373,7 @@ function setupForm() {
             // 在前端進行 Email 過濾，確保 100% 攔截
             const isAlreadyReg = dupCheck.docs.some(doc => {
                 const data = doc.data();
-                return data.userEmail === email && data.status !== 'cancelled';
+                return data.userEmail === email && data.status !== 'cancelled' && data.status !== 'payment_expired';
             });
 
             if (isAlreadyReg) {
@@ -323,20 +388,30 @@ function setupForm() {
 
         const capacity = parseInt(currentEvent.capacity) || 0;
         const isWaitlist = (registrationsCount >= capacity);
+        let finalStatus = isWaitlist ? 'waiting' : 'registered';
+        const isPaidEvent = currentEvent.fee && parseInt(currentEvent.fee) > 0;
+        
+        if (!isWaitlist && isPaidEvent) {
+            finalStatus = 'pending_payment';
+        }
 
+        const paymentDueAt = finalStatus === 'pending_payment' ? buildPaymentDueAt(currentEvent) : '';
         const regData = {
             eventId: eventId,
             eventName: currentEvent.name,
-            eventDate: currentEvent.date,
+            eventDate: getEventStartDate(currentEvent),
+            eventEndDate: getEventEndDate(currentEvent),
+            eventDateRange: formatEventDateRange(currentEvent),
             eventTime: currentEvent.time,
             userName: name,
             userPhone: phone,
             userEmail: email,
-            status: isWaitlist ? 'waiting' : 'registered',
+            status: finalStatus,
             timestamp: new Date().toISOString(),
             utmSource: utmSource,
             utmMedium: utmMedium,
-            utmCampaign: utmCampaign
+            utmCampaign: utmCampaign,
+            paymentDueAt: paymentDueAt
         };
 
         // 收集自訂欄位資料
@@ -361,14 +436,14 @@ function setupForm() {
             // 紀錄提交時間 (用於防灌水冷卻)
             localStorage.setItem(`last_submit_${eventId}`, Date.now().toString());
 
-            // 只有正式報名成功才寄信，候補則不寄信 (做法 B)
+            // 只有正式報名或待繳費才寄信，候補則不寄信
             if (!isWaitlist) {
                 const fullData = { id: docRef.id, ...regData };
-                sendRegistrationEmail(fullData);
+                sendRegistrationEmail(fullData, currentEvent);
                 // 顯示成功彈窗 (帶入完整的報名資料以利產生 QR/行事曆)
-                showSuccessModal(isWaitlist, fullData);
+                showSuccessModal(isWaitlist, fullData, currentEvent);
             } else {
-                showSuccessModal(isWaitlist, regData);
+                showSuccessModal(isWaitlist, regData, currentEvent);
             }
         } catch (err) {
             console.error(err);
@@ -396,6 +471,29 @@ function showSuccessModal(isWaitlist, data) {
     if (isWaitlist) {
         titleEl.textContent = '候補登記成功！';
         descEl.innerHTML = '目前活動名額已滿，系統已成功記錄您的候補請求。<br><br>請注意：若有名額釋出，系統將會立即發送「遞補成功通知」至您的信箱，請留意。';
+        if (qrContainer) qrContainer.style.display = 'none';
+        if (calButtons) calButtons.style.display = 'none';
+    } else if (data.status === 'pending_payment') {
+        titleEl.textContent = '報名保留中 (待繳費)';
+        const paymentCopyText = [
+            `活動：${currentEvent.name}`,
+            `應繳金額：NT$ ${(currentEvent.fee || 0).toLocaleString()}`,
+            `繳費期限：${formatDateTimeTW(data.paymentDueAt)}`,
+            `匯款資訊：${currentEvent.bankInfo || '請依通知信中的匯款資訊辦理'}`
+        ].join('\n');
+        descEl.innerHTML = `
+            感謝您的報名！本活動費用為 <strong>NT$ ${currentEvent.fee.toLocaleString()}</strong>。<br>
+            請於 <strong>${formatDateTimeTW(data.paymentDueAt)}</strong> 前完成繳費並回報，以保留您的名額。
+            <div style="margin:18px 0; padding:16px; background:#fff7ed; border:1px dashed #d97706; border-radius:14px; text-align:left; line-height:1.7;">
+                <p style="margin:0 0 8px 0; font-weight:700; color:#d97706;">匯款資訊</p>
+                <div style="white-space:pre-wrap; word-break:break-word; color:#4a3728;">${currentEvent.bankInfo || '請依通知信中的匯款資訊辦理'}</div>
+                ${currentEvent.paymentNote ? `<p style="margin:10px 0 0 0; color:#8a4b0f;"><strong>備註：</strong>${currentEvent.paymentNote}</p>` : ''}
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:10px;">
+                <button onclick="copyTextToClipboard(${JSON.stringify(paymentCopyText).replace(/"/g, '&quot;')})" style="padding:10px 14px; border:1px solid #d97706; background:#fff; color:#d97706; border-radius:999px; font-weight:700; cursor:pointer;">複製匯款資訊</button>
+                <button onclick="location.href='payment.html?id=${data.id}'" style="padding:10px 14px; border:0; background:#10b981; color:#fff; border-radius:999px; font-weight:700; cursor:pointer;">前往回報後五碼</button>
+            </div>
+            <span style="color:#d97706; font-size:0.9rem;">正式報到用 QR Code 將於確認收款後發送</span>`;
         if (qrContainer) qrContainer.style.display = 'none';
         if (calButtons) calButtons.style.display = 'none';
     } else {
@@ -436,8 +534,10 @@ function showSuccessModal(isWaitlist, data) {
 }
 
 function generateGoogleCalendarUrl(data) {
-    const startTime = data.eventDate.replace(/-/g, '') + 'T' + data.eventTime.split('~')[0].replace(':', '') + '00';
-    const endTime = data.eventDate.replace(/-/g, '') + 'T' + data.eventTime.split('~')[1].replace(':', '') + '00';
+    const startDate = data.eventDate || getEventStartDate(currentEvent);
+    const endDate = data.eventEndDate || getEventEndDateForCalendar(currentEvent);
+    const startTime = formatCalendarDate(startDate) + 'T' + data.eventTime.split('~')[0].replace(':', '') + '00';
+    const endTime = formatCalendarDate(endDate) + 'T' + data.eventTime.split('~')[1].replace(':', '') + '00';
     const title = encodeURIComponent(`【活動】${data.eventName}`);
     const details = encodeURIComponent(`您的報名序號：${data.id.substring(0, 8).toUpperCase()}\n地點：${currentEvent.location}`);
     const location = encodeURIComponent(currentEvent.location);
@@ -445,8 +545,10 @@ function generateGoogleCalendarUrl(data) {
 }
 
 function downloadICal(data) {
-    const startTime = data.eventDate.replace(/-/g, '') + 'T' + data.eventTime.split('~')[0].replace(':', '') + '00';
-    const endTime = data.eventDate.replace(/-/g, '') + 'T' + data.eventTime.split('~')[1].replace(':', '') + '00';
+    const startDate = data.eventDate || getEventStartDate(currentEvent);
+    const endDate = data.eventEndDate || getEventEndDateForCalendar(currentEvent);
+    const startTime = formatCalendarDate(startDate) + 'T' + data.eventTime.split('~')[0].replace(':', '') + '00';
+    const endTime = formatCalendarDate(endDate) + 'T' + data.eventTime.split('~')[1].replace(':', '') + '00';
     const icsContent = [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
@@ -476,16 +578,21 @@ function closeSuccessModal() {
 // ---------------------------------------------------------
 // 定案版：EmailJS 寄信邏輯與模板
 // ---------------------------------------------------------
-function sendRegistrationEmail(data) {
+function sendRegistrationEmail(data, eventData) {
     if (typeof emailjs === 'undefined') return;
 
     const isWaitlist = (data.status === 'waitlist');
-    const emailHtml = generateEventEmailHTML(data);
+    const isPendingPayment = (data.status === 'pending_payment');
+    const emailHtml = generateEventEmailHTML(data, eventData);
+
+    let subjectLine = `【活動報名成功通知】${data.eventName}`;
+    if (isWaitlist) subjectLine = `【候補登記成功通知】${data.eventName}`;
+    if (isPendingPayment) subjectLine = `【繳費通知】請完成《${data.eventName}》活動報名繳費`;
 
     const templateParams = {
         to_email: data.userEmail,
         to_name: data.userName,
-        subject: isWaitlist ? `【候補登記成功通知】${data.eventName}` : `【活動報名成功通知】${data.eventName}`,
+        subject: subjectLine,
         message_html: emailHtml
     };
 
@@ -494,8 +601,8 @@ function sendRegistrationEmail(data) {
         .catch(err => console.error("Email failed:", err));
 }
 
-function generateEventEmailHTML(data) {
-    const status = data.status; // 'registered' | 'waitlist' | 'cancelled'
+function generateEventEmailHTML(data, eventData) {
+    const status = data.status; // 'registered' | 'waitlist' | 'cancelled' | 'pending_payment'
     const mainFont = 'system-ui, -apple-system, sans-serif';
     const primaryBg = '#fdfbf7';
     const accentColor = (status === 'cancelled') ? '#8d7a6b' : '#d97706';
@@ -515,6 +622,12 @@ function generateEventEmailHTML(data) {
         mainDesc = `感謝您的參與！由於目前報名人數較多，您已進入活動 <strong style="color: ${accentColor};">${data.eventName}</strong> 的<strong>候補名單</strong>。若有名額釋出，我們將優先為您安排。`;
         statusLabel = '候補中 (Waitlist)';
         footerText = '期待在藝境空間見到您！';
+    } else if (status === 'pending_payment') {
+        titleText = '待繳費通知';
+        subTitle = 'Pending Payment';
+        mainDesc = `感謝您的報名！本活動需繳交費用 <strong>NT$ ${(eventData?.fee || 0).toLocaleString()}</strong>，請於 <strong>${formatDateTimeTW(data.paymentDueAt)}</strong> 前完成匯款，並回報您的帳號後五碼以保留名額。`;
+        statusLabel = '待繳費 (Pending)';
+        footerText = '完成繳款後，系統將會發送正式報名成功信件。';
     } else {
         titleText = '報名成功確認';
         subTitle = 'Registration Confirmed';
@@ -551,7 +664,7 @@ function generateEventEmailHTML(data) {
                     <table style="width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 15px;">
                         <tr><td style="padding: 10px 0; color: #8d7a6b; width: 100px;">目前狀態</td><td style="padding: 10px 0; font-weight: bold; color: ${accentColor};">${statusLabel}</td></tr>
                         <tr><td style="padding: 10px 0; color: #8d7a6b;">活動名稱</td><td style="padding: 10px 0; font-weight: bold;">${data.eventName}</td></tr>
-                        <tr><td style="padding: 10px 0; color: #8d7a6b;">活動日期</td><td style="padding: 10px 0; font-weight: bold;">${data.eventDate || ''}</td></tr>
+                        <tr><td style="padding: 10px 0; color: #8d7a6b;">活動日期</td><td style="padding: 10px 0; font-weight: bold;">${data.eventDateRange || data.eventDate || ''}</td></tr>
                         <tr><td style="padding: 10px 0; color: #8d7a6b;">活動時間</td><td style="padding: 10px 0; font-weight: bold;">${data.eventTime || ''}</td></tr>
                         ${status === 'cancelled' ? '' : `<tr><td style="padding: 10px 0; color: #8d7a6b;">報名序號</td><td style="padding: 10px 0; font-family: monospace; font-size: 18px; color: ${textMain};">${data.id.substring(0, 8).toUpperCase()}</td></tr>`}
                         ${customResponsesHtml}
@@ -568,7 +681,7 @@ function generateEventEmailHTML(data) {
 
                 <!-- 行事曆連結 -->
                 <div style="text-align: center; margin-bottom: 30px;">
-                    <a href="https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('【活動】'+data.eventName)}&dates=${data.eventDate.replace(/-/g, '')}T${data.eventTime.split('~')[0].replace(':', '')}00/${data.eventDate.replace(/-/g, '')}T${data.eventTime.split('~')[1].replace(':', '')}00&details=${encodeURIComponent('序號：'+data.id.substring(0,8))}&location=${encodeURIComponent(data.eventLocation || '')}&sf=true&output=xml" 
+                    <a href="${generateGoogleCalendarUrl(data)}" 
                        style="display: inline-block; padding: 10px 20px; background: #ffffff; border: 1px solid #ddd; border-radius: 8px; color: #4285f4; text-decoration: none; font-size: 14px; font-weight: bold; margin-right: 10px;">
                        + 加入 Google 日曆
                     </a>
@@ -594,6 +707,22 @@ function generateEventEmailHTML(data) {
                     <p style="margin: 0; font-size: 14px; color: #8d7a6b; line-height: 1.6;">
                         為了讓更多喜愛藝文的朋友能參與活動，若您因故不克出席，請務必於活動開始 <strong>2 天前</strong> 聯繫我們。感謝您的配合與體諒！
                     </p>
+                </div>
+                ` : ''}
+
+                <!-- 匯款資訊 (僅待繳費時顯示) -->
+                ${status === 'pending_payment' ? `
+                <div style="border: 1px dashed #d97706; border-radius: 12px; padding: 20px; background-color: #fefce8; margin-bottom: 25px;">
+                    <h4 style="margin: 0 0 12px 0; font-size: 15px; color: #d97706;"><i class="fas fa-money-bill-wave"></i> 匯款帳號資訊</h4>
+                    <div style="font-size: 14px; color: #6b5a4d; line-height: 1.8; white-space: pre-wrap; font-family: monospace;">${eventData?.bankInfo || '暫無匯款帳號資訊'}</div>
+                    <p style="margin: 12px 0 0 0; font-size: 14px; color: #8a4b0f;"><strong>繳費期限：</strong>${formatDateTimeTW(data.paymentDueAt)}</p>
+                    ${eventData?.paymentNote ? `<p style="margin: 12px 0 0 0; font-size: 14px; color: #8a4b0f;"><strong>備註：</strong>${eventData.paymentNote}</p>` : ''}
+                </div>
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <a href="https://a3614todoo-ship-it.github.io/event/payment.html?id=${data.id}" 
+                       style="display: inline-block; padding: 12px 25px; background: #d97706; color: white; text-decoration: none; border-radius: 8px; font-size: 15px; font-weight: bold;">
+                       我要回報匯款後五碼
+                    </a>
                 </div>
                 ` : ''}
 
