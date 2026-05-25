@@ -168,6 +168,19 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let currentEditingCustomFields = [];
     let currentEditingSurveyFields = [];
+    let currentEditingEmailTemplates = {};
+
+    const EMAIL_TEMPLATE_CONFIG = [
+        { key: 'registrationSuccess', label: '報名成功信', subject: '【活動報名成功通知】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n您已成功報名 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n報名序號：{{報名序號}}\n請留意活動通知，期待與您相見。' },
+        { key: 'pendingPayment', label: '待繳費通知信', subject: '【繳費通知】請完成《{{活動名稱}}》活動報名繳費', body: '親愛的 {{姓名}} 您好，\n\n您已完成 {{活動名稱}} 的報名保留。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n完成匯款後請回報後五碼：{{回報連結}}' },
+        { key: 'paymentReported', label: '匯款回報收到信', subject: '【已收到匯款回報】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n我們已收到您針對 {{活動名稱}} 的匯款回報，後五碼為 {{後五碼}}。\n目前狀態為等待對帳，管理員確認收款後會寄出正式報名成功信。' },
+        { key: 'paymentConfirmed', label: '收款確認信', subject: '【收款確認】{{活動名稱}} 報名成功！', body: '親愛的 {{姓名}} 您好，\n\n我們已收到您的款項，{{活動名稱}} 報名已正式成功。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n活動當天請出示信件中的 QR Code 完成報到。' },
+        { key: 'paymentReminder', label: '繳費提醒信', subject: '【繳費提醒】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n提醒您完成 {{活動名稱}} 的繳費。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n回報連結：{{回報連結}}' },
+        { key: 'preEventReminder', label: '行前提醒信', subject: '【行前提醒】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n提醒您即將參加 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n活動當天請預先準備 QR Code 報到。' },
+        { key: 'surveyInvite', label: '滿意度問卷信', subject: '【活動回饋】期待聽到您對《{{活動名稱}}》的看法', body: '親愛的 {{姓名}} 您好，\n\n感謝您參加 {{活動名稱}}。\n誠摯邀請您填寫滿意度問卷：{{問卷連結}}\n\n您的回饋對我們非常重要。' },
+        { key: 'waitlistPromoted', label: '遞補成功信', subject: '【遞補成功通知】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n請留意報到資訊並準時出席。' },
+        { key: 'cancelled', label: '取消報名信', subject: '【報名取消確認】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n我們已收到您的取消申請，{{活動名稱}} 的報名已取消。\n感謝您主動告知，期待未來再相見。' }
+    ];
 
     function getEventStartDate(eventData) {
         return eventData?.startDate || eventData?.date || '';
@@ -182,6 +195,123 @@ document.addEventListener('DOMContentLoaded', () => {
         const end = getEventEndDate(eventData);
         if (!start) return '';
         return end && end !== start ? `${start} ~ ${end}` : start;
+    }
+
+    function normalizeRegistrationStatus(status) {
+        return String(status || '')
+            .toLowerCase()
+            .replace(/[\u200B-\u200D\uFEFF]/g, '')
+            .trim();
+    }
+
+    function createDefaultEmailTemplates() {
+        return EMAIL_TEMPLATE_CONFIG.reduce((acc, item) => {
+            acc[item.key] = {
+                enabled: true,
+                subject: item.subject,
+                body: item.body
+            };
+            return acc;
+        }, {});
+    }
+
+    function mergeEmailTemplates(savedTemplates = {}) {
+        const defaults = createDefaultEmailTemplates();
+        Object.keys(savedTemplates || {}).forEach(key => {
+            defaults[key] = { ...defaults[key], ...savedTemplates[key] };
+        });
+        return defaults;
+    }
+
+    function renderEmailTemplateEditors() {
+        const container = document.getElementById('emailTemplatesContainer');
+        if (!container) return;
+        container.innerHTML = EMAIL_TEMPLATE_CONFIG.map(item => {
+            const tpl = currentEditingEmailTemplates[item.key] || {};
+            return `
+                <details style="border:1px solid var(--border-color); border-radius:12px; padding:14px; margin-bottom:12px; background:#fff;">
+                    <summary style="cursor:pointer; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:10px;">
+                        <input type="checkbox" ${tpl.enabled !== false ? 'checked' : ''} onchange="updateEmailTemplate('${item.key}', 'enabled', this.checked)" onclick="event.stopPropagation()">
+                        ${item.label}
+                    </summary>
+                    <div style="margin-top:14px;">
+                        <label style="font-size:0.9rem; color:var(--text-muted);">信件主旨</label>
+                        <input type="text" value="${escapeHtml(tpl.subject || '')}" oninput="updateEmailTemplate('${item.key}', 'subject', this.value)" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-color); margin:6px 0 12px;">
+                        <label style="font-size:0.9rem; color:var(--text-muted);">信件內容</label>
+                        <textarea rows="6" oninput="updateEmailTemplate('${item.key}', 'body', this.value)" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-color); line-height:1.6;">${escapeHtml(tpl.body || '')}</textarea>
+                    </div>
+                </details>
+            `;
+        }).join('');
+    }
+
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    window.updateEmailTemplate = function(key, field, value) {
+        if (!currentEditingEmailTemplates[key]) {
+            currentEditingEmailTemplates[key] = { enabled: true, subject: '', body: '' };
+        }
+        currentEditingEmailTemplates[key][field] = value;
+    };
+
+    function getEmailTemplate(eventData, key) {
+        const templates = mergeEmailTemplates(eventData?.emailTemplates || {});
+        return templates[key] || null;
+    }
+
+    function buildEmailVars(regData, eventData, extra = {}) {
+        const baseUrl = 'https://a3614todoo-ship-it.github.io/event';
+        return {
+            '姓名': regData.userName || '',
+            '活動名稱': eventData?.name || regData.eventName || '',
+            '活動日期': formatEventDateRange(eventData || regData),
+            '活動時間': eventData?.time || regData.eventTime || '',
+            '活動地點': eventData?.location || regData.eventLocation || '',
+            '報名序號': (regData.id || '').substring(0, 8).toUpperCase(),
+            '應繳金額': `NT$ ${((eventData?.fee || 0)).toLocaleString()}`,
+            '繳費期限': formatDateTimeTW(regData.paymentDueAt),
+            '匯款資訊': eventData?.bankInfo || '',
+            '付款注意事項': eventData?.paymentNote || '',
+            '回報連結': `${baseUrl}/payment.html?id=${regData.id}`,
+            '取消連結': `${baseUrl}/cancel.html?id=${regData.id}&email=${regData.userEmail || ''}`,
+            '問卷連結': `${baseUrl}/survey.html?id=${regData.id}`,
+            '後五碼': regData.paymentLast5 || extra.paymentLast5 || '',
+            ...extra
+        };
+    }
+
+    function applyEmailTemplateText(text, vars) {
+        return String(text || '').replace(/\{\{([^}]+)\}\}/g, (_, key) => {
+            return vars[String(key).trim()] ?? '';
+        });
+    }
+
+    function plainTextToEmailHtml(text) {
+        const escaped = escapeHtml(text).replace(/\n/g, '<br>');
+        return `
+        <div style="background-color:#f5f1ea; padding:40px 20px; font-family:system-ui,-apple-system,sans-serif;">
+            <div style="max-width:600px; margin:0 auto; background:#fdfbf7; border-radius:24px; overflow:hidden; border:1px solid #e5e0d8;">
+                <div style="background:#fff; padding:36px 20px; text-align:center; border-bottom:1px solid #f1ece4;">
+                    <h1 style="margin:0; font-size:24px; color:#4a3728; letter-spacing:5px;">藝 境 空 間</h1>
+                </div>
+                <div style="padding:36px; color:#4a3728; line-height:1.8; font-size:15px;">${escaped}</div>
+            </div>
+        </div>`;
+    }
+
+    function buildTemplatedEmail(key, regData, eventData, fallbackSubject, fallbackHtml, extra = {}) {
+        const tpl = getEmailTemplate(eventData, key);
+        if (tpl && tpl.enabled === false) return null;
+        const vars = buildEmailVars(regData, eventData, extra);
+        const subject = tpl?.subject ? applyEmailTemplateText(tpl.subject, vars) : fallbackSubject;
+        const messageHtml = tpl?.body ? plainTextToEmailHtml(applyEmailTemplateText(tpl.body, vars)) : fallbackHtml;
+        return { subject, messageHtml };
     }
 
     closeBtns.forEach(btn => {
@@ -213,8 +343,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editEventAutoPromote').checked = true;
         currentEditingCustomFields = [];
         currentEditingSurveyFields = [];
+        currentEditingEmailTemplates = createDefaultEmailTemplates();
         renderCustomFieldEditors();
         renderSurveyFieldEditors();
+        renderEmailTemplateEditors();
         document.getElementById('eventModalTitle').textContent = '新增活動';
         eventEditModal.style.display = 'block';
     });
@@ -522,6 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
             allowWaitlist: document.getElementById('editEventAllowWaitlist').checked,
             autoPromote: document.getElementById('editEventAutoPromote').checked,
             customFields: currentEditingCustomFields.filter(f => f.name.trim() !== ''),
+            emailTemplates: currentEditingEmailTemplates,
             fee: parseInt(document.getElementById('editEventFee').value) || 0,
             bankInfo: document.getElementById('editEventBankInfo').value.trim(),
             paymentDueDays: parseInt(document.getElementById('editEventPaymentDueDays').value) || 3,
@@ -553,7 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         tbody.innerHTML = events.map(e => {
-            const regCount = eventRegistrations.filter(r => r.eventId === e.id && r.status !== 'cancelled').length;
+            const regCount = eventRegistrations.filter(r => r.eventId === e.id && normalizeRegistrationStatus(r.status) !== 'cancelled').length;
             const fullStr = (regCount >= e.capacity) ? '<span style="color:#ef4444; font-size:0.85rem; font-weight:bold;">[已滿]</span>' : '';
             return `
             <tr style="${e.isActive ? '' : 'opacity: 0.6;'}">
@@ -619,8 +752,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         currentEditingCustomFields = ev.customFields ? JSON.parse(JSON.stringify(ev.customFields)) : [];
         currentEditingSurveyFields = ev.surveyFields ? JSON.parse(JSON.stringify(ev.surveyFields)) : [];
+        currentEditingEmailTemplates = mergeEmailTemplates(ev.emailTemplates || {});
         renderCustomFieldEditors();
         renderSurveyFieldEditors();
+        renderEmailTemplateEditors();
 
         document.getElementById('eventModalTitle').textContent = '編輯活動';
         eventEditModal.style.display = 'block';
@@ -657,7 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function isPaymentOverdue(reg) {
-        if ((reg.status || '').toLowerCase() !== 'pending_payment' || !reg.paymentDueAt) return false;
+        if (normalizeRegistrationStatus(reg.status) !== 'pending_payment' || !reg.paymentDueAt) return false;
         const dueAt = new Date(reg.paymentDueAt);
         return !Number.isNaN(dueAt.getTime()) && dueAt.getTime() < Date.now();
     }
@@ -709,8 +844,8 @@ document.addEventListener('DOMContentLoaded', () => {
         expireOverduePayments(list);
         
         const capacity = ev ? parseInt(ev.capacity) || 0 : 0;
-        const activeRegs = list.filter(r => ['registered', 'checked-in', 'pending_payment', 'payment_reported'].includes(r.status));
-        const checkedInCount = list.filter(r => r.status === 'checked-in').length;
+        const activeRegs = list.filter(r => ['registered', 'checked-in', 'pending_payment', 'payment_reported'].includes(normalizeRegistrationStatus(r.status)));
+        const checkedInCount = list.filter(r => normalizeRegistrationStatus(r.status) === 'checked-in').length;
         const availableSpots = capacity - activeRegs.length;
 
         document.getElementById('checkinCapacity').textContent = capacity;
@@ -733,13 +868,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const filterValue = paymentStatusFilter ? paymentStatusFilter.value : 'all';
         if (filterValue !== 'all') {
             list = list.filter(r => {
-                const s = (r.status || '').toLowerCase().trim();
+                const s = normalizeRegistrationStatus(r.status);
                 if (filterValue === 'paid') return s === 'registered' || s === 'checked-in';
                 return s === filterValue;
             });
         }
 
-        const visibleReportedIds = list.filter(r => (r.status || '').toLowerCase().trim() === 'payment_reported').map(r => r.id);
+        const visibleReportedIds = list.filter(r => normalizeRegistrationStatus(r.status) === 'payment_reported').map(r => r.id);
         selectedPaymentIds.forEach(id => {
             if (!visibleReportedIds.includes(id)) selectedPaymentIds.delete(id);
         });
@@ -754,14 +889,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         list.sort((a, b) => {
-            if (a.status === 'cancelled' && b.status !== 'cancelled') return 1;
-            if (b.status === 'cancelled' && a.status !== 'cancelled') return -1;
+            if (normalizeRegistrationStatus(a.status) === 'cancelled' && normalizeRegistrationStatus(b.status) !== 'cancelled') return 1;
+            if (normalizeRegistrationStatus(b.status) === 'cancelled' && normalizeRegistrationStatus(a.status) !== 'cancelled') return -1;
             return a.timestamp > b.timestamp ? 1 : -1;
         });
 
         let promoteCount = 0;
         const reportedLast5Counts = list.reduce((acc, item) => {
-            if ((item.status || '').toLowerCase().trim() === 'payment_reported' && item.paymentLast5) {
+            if (normalizeRegistrationStatus(item.status) === 'payment_reported' && item.paymentLast5) {
                 acc[item.paymentLast5] = (acc[item.paymentLast5] || 0) + 1;
             }
             return acc;
@@ -777,7 +912,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let actionBtn = '';
             
             const serialNo = (r.id || '').substring(0, 8).toUpperCase();
-            const s = (r.status || '').toLowerCase().trim();
+            const s = normalizeRegistrationStatus(r.status);
             const dueText = r.paymentDueAt ? `<div style="font-size:0.75rem; color:#8d7a6b; margin-top:4px;">期限：${formatDateTimeTW(r.paymentDueAt)}</div>` : '';
             const duplicateLast5Warning = r.paymentLast5 && reportedLast5Counts[r.paymentLast5] > 1
                 ? '<div style="font-size:0.75rem; color:#ef4444; margin-top:4px;">同活動後五碼重複，請核對姓名與金額</div>'
@@ -946,7 +1081,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             const ev = events.find(e => e.id === selectedId);
-            const list = eventRegistrations.filter(r => r.eventId === selectedId && r.status === 'pending_payment');
+            const list = eventRegistrations.filter(r => r.eventId === selectedId && normalizeRegistrationStatus(r.status) === 'pending_payment');
             if (list.length === 0) {
                 alert('目前沒有待繳費名單需要提醒。');
                 return;
@@ -991,7 +1126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p style="margin:0 0 8px 0;"><strong>繳費期限：</strong>${formatDateTimeTW(regData.paymentDueAt)}</p>
                         <p style="margin:0;"><strong>匯款資訊：</strong></p>
                         <div style="white-space:pre-wrap; font-family:monospace; color:#6b5a4d;">${eventData.bankInfo || '請依主辦單位提供資訊辦理'}</div>
-                        ${eventData.paymentNote ? `<p style="margin:12px 0 0 0; color:#8a4b0f;"><strong>備註：</strong>${eventData.paymentNote}</p>` : ''}
+                        ${eventData.paymentNote ? `<p style="margin:12px 0 0 0; color:#8a4b0f;"><strong>注意事項：</strong>${eventData.paymentNote}</p>` : ''}
                     </div>
                     <div style="text-align:center;">
                         <a href="https://a3614todoo-ship-it.github.io/event/payment.html?id=${regData.id}" style="display:inline-block; padding:12px 24px; background:#d97706; color:#fff; text-decoration:none; border-radius:10px; font-weight:bold;">回報匯款後五碼</a>
@@ -1001,11 +1136,20 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>`;
 
+        const templated = buildTemplatedEmail(
+            'paymentReminder',
+            regData,
+            eventData,
+            `【繳費提醒】${eventData.name}`,
+            emailHtml
+        );
+        if (!templated) return Promise.resolve('paymentReminder disabled');
+
         return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
             to_email: regData.userEmail,
             to_name: regData.userName,
-            subject: `【繳費提醒】${eventData.name}`,
-            message_html: emailHtml
+            subject: templated.subject,
+            message_html: templated.messageHtml
         });
     }
 
@@ -1049,10 +1193,19 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>`;
 
+        const templated = buildTemplatedEmail(
+            'paymentConfirmed',
+            regData,
+            eventData,
+            `【收款確認】${eventData.name} 報名成功！`,
+            emailHtml
+        );
+        if (!templated) return Promise.resolve('paymentConfirmed disabled');
+
         return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { 
             to_email: regData.userEmail, 
-            subject: `【收款確認】${eventData.name} 報名成功！`, 
-            message_html: emailHtml 
+            subject: templated.subject, 
+            message_html: templated.messageHtml 
         });
     }
 
@@ -1154,9 +1307,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            if (data.status === 'checked-in') {
+            const scanStatus = normalizeRegistrationStatus(data.status);
+            if (scanStatus === 'checked-in') {
                 showScannerFeedback(`此序號已於先前報到：<br><strong>${data.userName}</strong>`, "warning");
-            } else if (data.status === 'registered') {
+            } else if (scanStatus === 'registered') {
                 await regRef.update({ status: 'checked-in' });
                 showScannerFeedback(`報到成功！<br>歡迎您，<strong>${data.userName}</strong>`, "success");
             } else {
@@ -1200,7 +1354,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!selectedId) { alert('請先選擇活動'); return; }
 
             const ev = events.find(e => e.id === selectedId);
-            const list = eventRegistrations.filter(r => r.eventId === selectedId && r.status === 'registered');
+            const list = eventRegistrations.filter(r => r.eventId === selectedId && normalizeRegistrationStatus(r.status) === 'registered');
 
             if (list.length === 0) {
                 alert('目前沒有需要發送提醒的正式報名者 (可能已全部報到或尚未有人報名)。');
@@ -1284,10 +1438,19 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>`;
 
+        const templated = buildTemplatedEmail(
+            'preEventReminder',
+            regData,
+            eventData,
+            `【行前提醒】${eventData.name}`,
+            emailHtml
+        );
+        if (!templated) return Promise.resolve('preEventReminder disabled');
+
         return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { 
             to_email: regData.userEmail, 
-            subject: `【行前提醒】${eventData.name}`, 
-            message_html: emailHtml 
+            subject: templated.subject, 
+            message_html: templated.messageHtml 
         });
     }
 
@@ -1302,7 +1465,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const ev = events.find(e => e.id === selectedId);
             // 只發送給「已報到」的參加者
-            const list = eventRegistrations.filter(r => r.eventId === selectedId && r.status === 'checked-in');
+            const list = eventRegistrations.filter(r => r.eventId === selectedId && normalizeRegistrationStatus(r.status) === 'checked-in');
 
             if (list.length === 0) {
                 alert('目前沒有已報到的參加者，無法發送問卷。');
@@ -1350,11 +1513,20 @@ document.addEventListener('DOMContentLoaded', () => {
             <p style="font-size: 13px; color: #bcae9e;">藝境空間 管理團隊 敬上</p>
         </div>`;
 
+        const templated = buildTemplatedEmail(
+            'surveyInvite',
+            regData,
+            eventData,
+            `【活動回饋】期待聽到您對《${eventData.name}》的看法`,
+            emailHtml
+        );
+        if (!templated) return Promise.resolve('surveyInvite disabled');
+
         return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
             to_email: regData.userEmail,
             to_name: regData.userName,
-            subject: `【活動回饋】期待聽到您對《${eventData.name}》的看法`,
-            message_html: emailHtml
+            subject: templated.subject,
+            message_html: templated.messageHtml
         });
     }
 
@@ -1458,7 +1630,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let csvContent = "\uFEFF"; // BOM
             csvContent += "表單流水號,姓名,電話,信箱,報名時間,報名狀態\n";
             list.forEach(r => {
-                let s = r.status;
+                let s = normalizeRegistrationStatus(r.status);
                 if(s==='checked-in') s='已報到'; else if(s==='registered') s='未報到'; else if(s==='waiting') s='候補中'; else s='已取消';
                 csvContent += `"${r.id}","${r.userName}","${r.userPhone}","${r.userEmail}","${new Date(r.timestamp).toLocaleString('zh-TW')}","${s}"\n`;
             });
@@ -1545,9 +1717,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderAnalytics() {
         if (!eventRegistrations || !events) return;
         const totalReg = eventRegistrations.length;
-        const activeRegs = eventRegistrations.filter(r => r.status !== 'cancelled');
-        const checkedIn = activeRegs.filter(r => r.status === 'checked-in').length;
-        const waiting = activeRegs.filter(r => r.status === 'waiting').length;
+        const activeRegs = eventRegistrations.filter(r => normalizeRegistrationStatus(r.status) !== 'cancelled');
+        const checkedIn = activeRegs.filter(r => normalizeRegistrationStatus(r.status) === 'checked-in').length;
+        const waiting = activeRegs.filter(r => normalizeRegistrationStatus(r.status) === 'waiting').length;
         const checkInRate = activeRegs.length > 0 ? Math.round((checkedIn / activeRegs.length) * 100) : 0;
 
         // 更新舊版卡片
@@ -1602,7 +1774,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updatePopularChart() {
         if (!popularChart) return;
         const eventStats = events.map(e => {
-            const count = eventRegistrations.filter(r => r.eventId === e.id && r.status !== 'cancelled').length;
+            const count = eventRegistrations.filter(r => r.eventId === e.id && normalizeRegistrationStatus(r.status) !== 'cancelled').length;
             return { name: e.name, count: count };
         });
 
@@ -1619,8 +1791,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!tbody) return;
 
         const rankings = events.map(e => {
-            const regCount = eventRegistrations.filter(r => r.eventId === e.id && r.status !== 'cancelled').length;
-            const checkedInCount = eventRegistrations.filter(r => r.eventId === e.id && r.status === 'checked-in').length;
+            const regCount = eventRegistrations.filter(r => r.eventId === e.id && normalizeRegistrationStatus(r.status) !== 'cancelled').length;
+            const checkedInCount = eventRegistrations.filter(r => r.eventId === e.id && normalizeRegistrationStatus(r.status) === 'checked-in').length;
             const views = e.views || 0;
             const checkinRate = regCount > 0 ? Math.round((checkedInCount / regCount) * 100) : 0;
             const conversionRate = views > 0 ? Math.round((regCount / views) * 100) : 0;
@@ -1651,7 +1823,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateUtmChart() {
         if (!utmSourceChart) return;
 
-        const activeRegs = eventRegistrations.filter(r => r.status !== 'cancelled');
+        const activeRegs = eventRegistrations.filter(r => normalizeRegistrationStatus(r.status) !== 'cancelled');
         const sourceMap = {};
 
         activeRegs.forEach(r => {
@@ -1743,7 +1915,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
         </div>`;
-        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { to_email: regData.userEmail, subject: `【遞補成功通知】${eventData.name}`, message_html: emailHtml }).catch(console.error);
+        const templated = buildTemplatedEmail(
+            'waitlistPromoted',
+            regData,
+            eventData,
+            `【遞補成功通知】${eventData.name}`,
+            emailHtml
+        );
+        if (!templated) return;
+        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { to_email: regData.userEmail, subject: templated.subject, message_html: templated.messageHtml }).catch(console.error);
     }
 
     function sendCancelEmail(regData, eventData) {
@@ -1778,7 +1958,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
         </div>`;
-        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { to_email: regData.userEmail, subject: `【報名取消確認】${eventData.name}`, message_html: emailHtml }).catch(console.error);
+        const templated = buildTemplatedEmail(
+            'cancelled',
+            regData,
+            eventData,
+            `【報名取消確認】${eventData.name}`,
+            emailHtml
+        );
+        if (!templated) return;
+        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { to_email: regData.userEmail, subject: templated.subject, message_html: templated.messageHtml }).catch(console.error);
     }
 
     // 初始化畫面

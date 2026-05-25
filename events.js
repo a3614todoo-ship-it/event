@@ -90,6 +90,57 @@ function copyTextToClipboard(text, successMessage = '已複製到剪貼簿') {
     }
 }
 
+function getEmailTemplate(eventData, key) {
+    return eventData?.emailTemplates?.[key] || null;
+}
+
+function isEmailTemplateEnabled(eventData, key) {
+    const template = getEmailTemplate(eventData, key);
+    return template ? template.enabled !== false : true;
+}
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function plainTextToEmailHtml(text) {
+    return `
+    <div style="background-color:#f5f1ea; padding:40px 20px; font-family:system-ui,-apple-system,sans-serif;">
+        <div style="max-width:600px; margin:0 auto; background:#fdfbf7; border-radius:24px; overflow:hidden; border:1px solid #e5e0d8;">
+            <div style="background:#fff; padding:36px 20px; text-align:center; border-bottom:1px solid #f1ece4;">
+                <h1 style="margin:0; font-size:24px; color:#4a3728; letter-spacing:5px;">藝 境 空 間</h1>
+            </div>
+            <div style="padding:36px; color:#4a3728; line-height:1.8; font-size:15px;">${escapeHtml(text).replace(/\n/g, '<br>')}</div>
+        </div>
+    </div>`;
+}
+
+function buildEmailVars(data, eventData) {
+    const baseUrl = 'https://a3614todoo-ship-it.github.io/event';
+    return {
+        '姓名': data.userName || '',
+        '活動名稱': eventData?.name || data.eventName || '',
+        '活動日期': data.eventDateRange || formatEventDateRange(eventData || data),
+        '活動時間': eventData?.time || data.eventTime || '',
+        '活動地點': eventData?.location || data.eventLocation || '',
+        '報名序號': (data.id || '').substring(0, 8).toUpperCase(),
+        '應繳金額': `NT$ ${((eventData?.fee || 0)).toLocaleString()}`,
+        '繳費期限': formatDateTimeTW(data.paymentDueAt),
+        '匯款資訊': eventData?.bankInfo || '',
+        '付款注意事項': eventData?.paymentNote || '',
+        '回報連結': `${baseUrl}/payment.html?id=${data.id}`,
+        '取消連結': `${baseUrl}/cancel.html?id=${data.id}&email=${data.userEmail || ''}`
+    };
+}
+
+function applyEmailTemplateText(text, vars) {
+    return String(text || '').replace(/\{\{([^}]+)\}\}/g, (_, key) => vars[String(key).trim()] ?? '');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('isStandaloneEventAdmin') === 'true') {
         const adminBtn = document.getElementById('adminQuickLink');
@@ -487,7 +538,7 @@ function showSuccessModal(isWaitlist, data) {
             <div style="margin:18px 0; padding:16px; background:#fff7ed; border:1px dashed #d97706; border-radius:14px; text-align:left; line-height:1.7;">
                 <p style="margin:0 0 8px 0; font-weight:700; color:#d97706;">匯款資訊</p>
                 <div style="white-space:pre-wrap; word-break:break-word; color:#4a3728;">${currentEvent.bankInfo || '請依通知信中的匯款資訊辦理'}</div>
-                ${currentEvent.paymentNote ? `<p style="margin:10px 0 0 0; color:#8a4b0f;"><strong>備註：</strong>${currentEvent.paymentNote}</p>` : ''}
+                ${currentEvent.paymentNote ? `<p style="margin:10px 0 0 0; color:#8a4b0f;"><strong>注意事項：</strong>${currentEvent.paymentNote}</p>` : ''}
             </div>
             <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:10px;">
                 <button onclick="copyTextToClipboard(${JSON.stringify(paymentCopyText).replace(/"/g, '&quot;')})" style="padding:10px 14px; border:1px solid #d97706; background:#fff; color:#d97706; border-radius:999px; font-weight:700; cursor:pointer;">複製匯款資訊</button>
@@ -583,11 +634,21 @@ function sendRegistrationEmail(data, eventData) {
 
     const isWaitlist = (data.status === 'waitlist');
     const isPendingPayment = (data.status === 'pending_payment');
-    const emailHtml = generateEventEmailHTML(data, eventData);
+    const templateKey = isPendingPayment ? 'pendingPayment' : (isWaitlist ? 'waitlistPromoted' : 'registrationSuccess');
+    if (!isEmailTemplateEnabled(eventData, templateKey)) return;
+    let emailHtml = generateEventEmailHTML(data, eventData);
 
     let subjectLine = `【活動報名成功通知】${data.eventName}`;
     if (isWaitlist) subjectLine = `【候補登記成功通知】${data.eventName}`;
     if (isPendingPayment) subjectLine = `【繳費通知】請完成《${data.eventName}》活動報名繳費`;
+
+    const customTemplate = getEmailTemplate(eventData, templateKey);
+    if (customTemplate?.subject) {
+        subjectLine = applyEmailTemplateText(customTemplate.subject, buildEmailVars(data, eventData));
+    }
+    if (customTemplate?.body) {
+        emailHtml = plainTextToEmailHtml(applyEmailTemplateText(customTemplate.body, buildEmailVars(data, eventData)));
+    }
 
     const templateParams = {
         to_email: data.userEmail,
@@ -716,7 +777,7 @@ function generateEventEmailHTML(data, eventData) {
                     <h4 style="margin: 0 0 12px 0; font-size: 15px; color: #d97706;"><i class="fas fa-money-bill-wave"></i> 匯款帳號資訊</h4>
                     <div style="font-size: 14px; color: #6b5a4d; line-height: 1.8; white-space: pre-wrap; font-family: monospace;">${eventData?.bankInfo || '暫無匯款帳號資訊'}</div>
                     <p style="margin: 12px 0 0 0; font-size: 14px; color: #8a4b0f;"><strong>繳費期限：</strong>${formatDateTimeTW(data.paymentDueAt)}</p>
-                    ${eventData?.paymentNote ? `<p style="margin: 12px 0 0 0; font-size: 14px; color: #8a4b0f;"><strong>備註：</strong>${eventData.paymentNote}</p>` : ''}
+                    ${eventData?.paymentNote ? `<p style="margin: 12px 0 0 0; font-size: 14px; color: #8a4b0f;"><strong>注意事項：</strong>${eventData.paymentNote}</p>` : ''}
                 </div>
                 <div style="text-align: center; margin-bottom: 30px;">
                     <a href="https://a3614todoo-ship-it.github.io/event/payment.html?id=${data.id}" 

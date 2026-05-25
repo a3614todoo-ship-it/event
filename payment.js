@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('bankInfo').textContent = eventData.bankInfo || '請依通知信中的匯款資訊辦理';
             const noteEl = document.getElementById('paymentNote');
             if (eventData.paymentNote) {
-                noteEl.textContent = `備註：${eventData.paymentNote}`;
+                noteEl.textContent = `注意事項：${eventData.paymentNote}`;
                 noteEl.style.display = 'block';
             }
         } else {

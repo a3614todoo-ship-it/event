@@ -332,13 +332,13 @@
                 </div>
 
                 <div class="form-group" style="margin-bottom: 15px;">
-                    <label>匯款帳號資訊 <span style="font-size:0.8rem; color:var(--text-muted);">(可只填帳號後五碼或完整帳號，不需填戶名)</span></label>
-                    <textarea id="editEventBankInfo" placeholder="例如：銀行代碼 000，帳號後五碼 12345" rows="3" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);"></textarea>
+                    <label>匯款帳號資訊 <span style="font-size:0.8rem; color:var(--text-muted);">(主辦方收款資料，可填完整帳號與戶名)</span></label>
+                    <textarea id="editEventBankInfo" placeholder="例如：匯款銀行：永豐銀行 820&#10;匯款帳號：125-56156-890&#10;戶名：一心戲劇團" rows="3" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);"></textarea>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 15px;">
-                    <label>付款備註 <span style="font-size:0.8rem; color:var(--text-muted);">(顯示於繳費通知與回報頁)</span></label>
-                    <textarea id="editEventPaymentNote" placeholder="例如：匯款後請於本頁回報帳號後五碼，保留名額將依繳費期限處理。" rows="3" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);"></textarea>
+                    <label>付款注意事項 <span style="font-size:0.8rem; color:var(--text-muted);">(顯示於繳費通知與回報頁)</span></label>
+                    <textarea id="editEventPaymentNote" placeholder="例如：匯款後請於本頁回報匯款帳號後五碼，保留名額將依繳費期限處理。" rows="3" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);"></textarea>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 15px;">
@@ -387,6 +387,20 @@
                         <button type="button" id="addCustomFieldBtn" class="btn-secondary" style="padding: 5px 12px; font-size: 0.85rem;">新增欄位</button>
                     </div>
                     <div id="customFieldsContainer"></div>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 25px 0;">
+
+                <div class="form-group">
+                    <label style="display:block; margin-bottom: 8px;">信件模板設定</label>
+                    <p style="margin: 0 0 12px 0; color: var(--text-muted); font-size: 0.9rem; line-height: 1.6;">
+                        可針對此活動設定每個階段是否寄信與信件文字。可用變數：
+                        <code>{{姓名}}</code> <code>{{活動名稱}}</code> <code>{{活動日期}}</code> <code>{{活動時間}}</code>
+                        <code>{{活動地點}}</code> <code>{{報名序號}}</code> <code>{{應繳金額}}</code> <code>{{繳費期限}}</code>
+                        <code>{{匯款資訊}}</code> <code>{{付款注意事項}}</code> <code>{{回報連結}}</code> <code>{{取消連結}}</code>
+                        <code>{{問卷連結}}</code>
+                    </p>
+                    <div id="emailTemplatesContainer"></div>
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 35px; border-top: 1px solid var(--border-color); padding-top: 25px;">
@@ -478,6 +492,6 @@
     </div>
 
     <!-- 專屬的 admin.js -->
-    <script src="admin.js"></script>
+    <script src="admin.js?v=20260525-payment-status-fix"></script>
 </body>
 </html>
