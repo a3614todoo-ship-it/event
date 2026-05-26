@@ -63,6 +63,15 @@ function plainTextToEmailHtml(text) {
     </div>`;
 }
 
+function buildEmailFooterBlockHtml() {
+    return `
+    <div style="text-align:center; border-top:1px solid #f1ece4; padding-top:30px; margin-top:28px;">
+        <p style="margin:0 0 18px 0; font-size:14px; color:#8d7a6b;">如果您對活動有任何疑問，歡迎隨時與我們聯繫。</p>
+        <h4 style="margin:0; font-size:18px; color:#4a3728; line-height:1.6;">管理員確認收款後，系統將會發送正式報名成功信件。</h4>
+        <p style="margin:16px 0 0 0; font-size:13px; color:#bcae9e;">藝境空間 管理團隊 敬上</p>
+    </div>`;
+}
+
 function buildEmailVars(regData, eventData, last5Digits) {
     const baseUrl = 'https://a3614todoo-ship-it.github.io/event';
     return {
@@ -78,7 +87,8 @@ function buildEmailVars(regData, eventData, last5Digits) {
         '付款注意事項': eventData?.paymentNote || '',
         '回報連結': `${baseUrl}/payment.html?id=${regData.id}`,
         '取消連結': `${baseUrl}/cancel.html?id=${regData.id}&email=${regData.userEmail || ''}`,
-        '後五碼': last5Digits || regData.paymentLast5 || ''
+        '後五碼': last5Digits || regData.paymentLast5 || '',
+        '信件尾巴區塊': '__EMAIL_FOOTER_BLOCK__'
     };
 }
 
@@ -117,7 +127,7 @@ function sendPaymentReportReceivedEmail(regData, eventData, last5Digits) {
         ? applyEmailTemplateText(customTemplate.subject, vars)
         : `【已收到匯款回報】${eventName}`;
     const messageHtml = customTemplate?.body
-        ? plainTextToEmailHtml(applyEmailTemplateText(customTemplate.body, vars))
+        ? plainTextToEmailHtml(applyEmailTemplateText(customTemplate.body, vars)).replace(/__EMAIL_FOOTER_BLOCK__/g, buildEmailFooterBlockHtml())
         : emailHtml;
 
     return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {

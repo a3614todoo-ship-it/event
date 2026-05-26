@@ -214,7 +214,10 @@ function buildEmailVars(data, eventData) {
         '報名序號': (data.id || '').substring(0, 8).toUpperCase(),
         'QRCode': '__QR_CODE_BLOCK__',
         '活動資訊區塊': '__EVENT_INFO_BLOCK__',
-        '報到須知區塊': '__CHECKIN_NOTICE_BLOCK__'
+        '報到須知區塊': '__CHECKIN_NOTICE_BLOCK__',
+        '取消連結': '__CANCEL_REGISTRATION_BLOCK__',
+        '取消網址': `https://a3614todoo-ship-it.github.io/event/cancel.html?id=${encodeURIComponent(data.id || '')}&email=${encodeURIComponent(data.userEmail || '')}`,
+        '信件尾巴區塊': '__EMAIL_FOOTER_BLOCK__'
     };
 }
 
@@ -226,7 +229,30 @@ function injectRichEmailBlocks(html, data, eventData) {
     return html
         .replace(/__QR_CODE_BLOCK__/g, buildQrCodeHtml(data))
         .replace(/__EVENT_INFO_BLOCK__/g, buildEventInfoBlockHtml(data, eventData))
-        .replace(/__CHECKIN_NOTICE_BLOCK__/g, buildCheckinNoticeBlockHtml());
+        .replace(/__CHECKIN_NOTICE_BLOCK__/g, buildCheckinNoticeBlockHtml())
+        .replace(/__CANCEL_REGISTRATION_BLOCK__/g, buildCancelRegistrationBlockHtml(data))
+        .replace(/__EMAIL_FOOTER_BLOCK__/g, buildEmailFooterBlockHtml());
+}
+
+function buildEmailFooterBlockHtml() {
+    return `
+    <div style="text-align:center; border-top:1px solid #f1ece4; padding-top:30px; margin-top:28px;">
+        <p style="margin:0 0 18px 0; font-size:14px; color:#8d7a6b;">如果您對活動有任何疑問，歡迎隨時與我們聯繫。</p>
+        <h4 style="margin:0; font-size:18px; color:#4a3728; line-height:1.6;">請留意報到資訊並準時出席。</h4>
+        <p style="margin:16px 0 0 0; font-size:13px; color:#bcae9e;">藝境空間 管理團隊 敬上</p>
+    </div>`;
+}
+
+function buildCancelRegistrationBlockHtml(data) {
+    if (!data?.id) return '';
+    const cancelUrl = `https://a3614todoo-ship-it.github.io/event/cancel.html?id=${encodeURIComponent(data.id || '')}&email=${encodeURIComponent(data.userEmail || '')}`;
+    return `
+    <div style="text-align:center; border-top:1px solid #f1ece4; padding-top:24px; margin-top:28px;">
+        <p style="font-size:14px; color:#bcae9e; margin:0 0 10px 0;">若您因故不克參加，請點擊下方連結取消：</p>
+        <a href="${cancelUrl}" style="color:#ef4444; text-decoration:underline; font-size:14px;">
+            我要取消報名 (無法撤回)
+        </a>
+    </div>`;
 }
 
 function normalizeWaitlistTemplate(template) {
@@ -237,7 +263,7 @@ function normalizeWaitlistTemplate(template) {
         '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n{{QRCode}}\n\n請留意報到資訊並準時出席。'
     ];
     if (oldBodies.includes(updated.body)) {
-        updated.body = '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n\n{{活動資訊區塊}}\n\n{{QRCode}}\n\n{{報到須知區塊}}\n\n請留意報到資訊並準時出席。';
+        updated.body = '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n\n{{活動資訊區塊}}\n\n{{QRCode}}\n\n{{報到須知區塊}}\n\n{{取消連結}}\n\n{{信件尾巴區塊}}';
     }
     return updated;
 }
@@ -256,6 +282,8 @@ async function sendPromotionEmail(data, eventData = {}) {
         ${buildEventInfoBlockHtml(data, eventData)}
         ${buildQrCodeHtml(data)}
         ${buildCheckinNoticeBlockHtml()}
+        ${buildCancelRegistrationBlockHtml(data)}
+        ${buildEmailFooterBlockHtml()}
         <p>您可以點擊下方連結查看詳細資訊並加入行事曆：</p>
         <a href="https://a3614todoo-ship-it.github.io/event/details.html?id=${data.eventId}" style="display: inline-block; padding: 12px 25px; background: #d97706; color: white; text-decoration: none; border-radius: 50px;">查看活動詳情</a>
     </div>`;

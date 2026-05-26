@@ -98,26 +98,32 @@ function normalizeEmailTemplate(key, template) {
     if (!template) return null;
     const updated = { ...template };
     const richDefaults = {
-        registrationSuccess: '親愛的 {{姓名}} 您好，\n\n恭喜您！您已成功報名 {{活動名稱}}，以下是您的報名資訊：\n\n{{活動資訊區塊}}\n\n{{QRCode}}\n\n{{報到須知區塊}}\n\n請留意活動通知，期待與您相見。',
-        pendingPayment: '親愛的 {{姓名}} 您好，\n\n感謝您的報名！本活動需繳交費用 {{應繳金額}}，請於 {{繳費期限}} 前完成匯款，並回報您的帳號後五碼以保留名額。\n\n{{活動資訊區塊}}\n\n{{報到須知區塊}}\n\n{{匯款資訊區塊}}\n\n{{回報連結}}',
-        waitlistPromoted: '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n\n{{活動資訊區塊}}\n\n{{QRCode}}\n\n{{報到須知區塊}}\n\n請留意報到資訊並準時出席。'
+        registrationSuccess: '親愛的 {{姓名}} 您好，\n\n恭喜您！您已成功報名 {{活動名稱}}，以下是您的報名資訊：\n\n{{活動資訊區塊}}\n\n{{QRCode}}\n\n{{報到須知區塊}}\n\n{{取消連結}}\n\n{{信件尾巴區塊}}',
+        pendingPayment: '親愛的 {{姓名}} 您好，\n\n感謝您的報名！本活動需繳交費用 {{應繳金額}}，請於 {{繳費期限}} 前完成匯款，並回報您的帳號後五碼以保留名額。\n\n{{活動資訊區塊}}\n\n{{報到須知區塊}}\n\n{{匯款資訊區塊}}\n\n{{回報連結}}\n\n{{取消連結}}\n\n{{信件尾巴區塊}}',
+        waitlistPromoted: '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n\n{{活動資訊區塊}}\n\n{{QRCode}}\n\n{{報到須知區塊}}\n\n{{取消連結}}\n\n{{信件尾巴區塊}}'
     };
     const oldBodies = {
         registrationSuccess: [
             '親愛的 {{姓名}} 您好，\n\n您已成功報名 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n報名序號：{{報名序號}}\n請留意活動通知，期待與您相見。',
-            '親愛的 {{姓名}} 您好，\n\n您已成功報名 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n報名序號：{{報名序號}}\n\n{{QRCode}}\n\n請留意活動通知，期待與您相見。'
+            '親愛的 {{姓名}} 您好，\n\n您已成功報名 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n報名序號：{{報名序號}}\n\n{{QRCode}}\n\n請留意活動通知，期待與您相見。',
+            '親愛的 {{姓名}} 您好，\n\n恭喜您！您已成功報名 {{活動名稱}}，以下是您的報名資訊：\n\n{{活動資訊區塊}}\n\n{{QRCode}}\n\n{{報到須知區塊}}\n\n請留意活動通知，期待與您相見。'
         ],
         pendingPayment: [
             '親愛的 {{姓名}} 您好，\n\n您已完成 {{活動名稱}} 的報名保留。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n完成匯款後請回報後五碼：{{回報連結}}',
-            '親愛的 {{姓名}} 您好，\n\n您已完成 {{活動名稱}} 的報名保留。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n完成匯款後，請點擊下方按鈕回報匯款帳號後五碼：\n{{回報連結}}'
+            '親愛的 {{姓名}} 您好，\n\n您已完成 {{活動名稱}} 的報名保留。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n完成匯款後，請點擊下方按鈕回報匯款帳號後五碼：\n{{回報連結}}',
+            '親愛的 {{姓名}} 您好，\n\n感謝您的報名！本活動需繳交費用 {{應繳金額}}，請於 {{繳費期限}} 前完成匯款，並回報您的帳號後五碼以保留名額。\n\n{{活動資訊區塊}}\n\n{{報到須知區塊}}\n\n{{匯款資訊區塊}}\n\n{{回報連結}}'
         ],
         waitlistPromoted: [
             '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n請留意報到資訊並準時出席。',
-            '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n{{QRCode}}\n\n請留意報到資訊並準時出席。'
+            '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n{{QRCode}}\n\n請留意報到資訊並準時出席。',
+            '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n\n{{活動資訊區塊}}\n\n{{QRCode}}\n\n{{報到須知區塊}}\n\n請留意報到資訊並準時出席。'
         ]
     };
     if (oldBodies[key]?.includes(updated.body)) {
         updated.body = richDefaults[key];
+    }
+    if (updated.body && !updated.body.includes('{{信件尾巴區塊}}')) {
+        updated.body = `${updated.body}\n\n{{信件尾巴區塊}}`;
     }
     return updated;
 }
@@ -161,9 +167,24 @@ function injectRichEmailBlocks(html, data, eventData = {}, templateKey = '') {
     return html
         .replace(/__QR_CODE_BLOCK__/g, buildQrCodeHtml(data))
         .replace(/__PAYMENT_REPORT_BUTTON__/g, buildPaymentReportButtonHtml(data))
+        .replace(/__CANCEL_REGISTRATION_BLOCK__/g, buildCancelRegistrationBlockHtml(data))
         .replace(/__EVENT_INFO_BLOCK__/g, buildEventInfoBlockHtml(data, eventData, templateKey))
         .replace(/__CHECKIN_NOTICE_BLOCK__/g, buildCheckinNoticeBlockHtml())
-        .replace(/__PAYMENT_INFO_BLOCK__/g, buildPaymentInfoBlockHtml(data, eventData));
+        .replace(/__PAYMENT_INFO_BLOCK__/g, buildPaymentInfoBlockHtml(data, eventData))
+        .replace(/__EMAIL_FOOTER_BLOCK__/g, buildEmailFooterBlockHtml(templateKey));
+}
+
+function buildCancelRegistrationBlockHtml(data) {
+    if (!data?.id) return '';
+    const baseUrl = 'https://a3614todoo-ship-it.github.io/event';
+    const cancelUrl = `${baseUrl}/cancel.html?id=${encodeURIComponent(data.id || '')}&email=${encodeURIComponent(data.userEmail || '')}`;
+    return `
+    <div style="text-align:center; border-top:1px solid #f1ece4; padding-top:24px; margin-top:28px;">
+        <p style="font-size:14px; color:#bcae9e; margin:0 0 10px 0;">若您因故不克參加，請點擊下方連結取消：</p>
+        <a href="${cancelUrl}" style="color:#ef4444; text-decoration:underline; font-size:14px;">
+            我要取消報名 (無法撤回)
+        </a>
+    </div>`;
 }
 
 function buildPaymentReportButtonHtml(data) {
@@ -234,6 +255,20 @@ function buildPaymentInfoBlockHtml(data, eventData) {
     </div>`;
 }
 
+function buildEmailFooterBlockHtml(templateKey) {
+    const footerMap = {
+        registrationSuccess: '期待在藝境空間與您相見！',
+        pendingPayment: '完成繳款後，系統將會發送正式報名成功信件。',
+        waitlistPromoted: '請留意報到資訊並準時出席。'
+    };
+    return `
+    <div style="text-align:center; border-top:1px solid #f1ece4; padding-top:30px; margin-top:28px;">
+        <p style="margin:0 0 18px 0; font-size:14px; color:#8d7a6b;">如果您對活動有任何疑問，歡迎隨時與我們聯繫。</p>
+        <h4 style="margin:0; font-size:18px; color:#4a3728; line-height:1.6;">${escapeHtml(footerMap[templateKey] || '期待在藝境空間與您相見！')}</h4>
+        <p style="margin:16px 0 0 0; font-size:13px; color:#bcae9e;">藝境空間 管理團隊 敬上</p>
+    </div>`;
+}
+
 function buildEmailVars(data, eventData) {
     const baseUrl = 'https://a3614todoo-ship-it.github.io/event';
     return {
@@ -249,12 +284,14 @@ function buildEmailVars(data, eventData) {
         '付款注意事項': eventData?.paymentNote || '',
         '回報連結': '__PAYMENT_REPORT_BUTTON__',
         '回報網址': `${baseUrl}/payment.html?id=${data.id}`,
-        '取消連結': `${baseUrl}/cancel.html?id=${data.id}&email=${data.userEmail || ''}`,
+        '取消連結': '__CANCEL_REGISTRATION_BLOCK__',
+        '取消網址': `${baseUrl}/cancel.html?id=${encodeURIComponent(data.id || '')}&email=${encodeURIComponent(data.userEmail || '')}`,
         'QRCode': '__QR_CODE_BLOCK__',
         'QR Code': '__QR_CODE_BLOCK__',
         '活動資訊區塊': '__EVENT_INFO_BLOCK__',
         '報到須知區塊': '__CHECKIN_NOTICE_BLOCK__',
-        '匯款資訊區塊': '__PAYMENT_INFO_BLOCK__'
+        '匯款資訊區塊': '__PAYMENT_INFO_BLOCK__',
+        '信件尾巴區塊': '__EMAIL_FOOTER_BLOCK__'
     };
 }
 
