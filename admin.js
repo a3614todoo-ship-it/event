@@ -171,14 +171,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentEditingEmailTemplates = {};
 
     const EMAIL_TEMPLATE_CONFIG = [
-        { key: 'registrationSuccess', label: '報名成功信', subject: '【活動報名成功通知】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n您已成功報名 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n報名序號：{{報名序號}}\n\n{{QRCode}}\n\n請留意活動通知，期待與您相見。' },
-        { key: 'pendingPayment', label: '待繳費通知信', subject: '【繳費通知】請完成《{{活動名稱}}》活動報名繳費', body: '親愛的 {{姓名}} 您好，\n\n您已完成 {{活動名稱}} 的報名保留。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n完成匯款後，請點擊下方按鈕回報匯款帳號後五碼：\n{{回報連結}}' },
+        { key: 'registrationSuccess', label: '報名成功信', subject: '【活動報名成功通知】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n恭喜您！您已成功報名 {{活動名稱}}，以下是您的報名資訊：\n\n{{活動資訊區塊}}\n\n{{QRCode}}\n\n{{報到須知區塊}}\n\n請留意活動通知，期待與您相見。' },
+        { key: 'pendingPayment', label: '待繳費通知信', subject: '【繳費通知】請完成《{{活動名稱}}》活動報名繳費', body: '親愛的 {{姓名}} 您好，\n\n感謝您的報名！本活動需繳交費用 {{應繳金額}}，請於 {{繳費期限}} 前完成匯款，並回報您的帳號後五碼以保留名額。\n\n{{活動資訊區塊}}\n\n{{報到須知區塊}}\n\n{{匯款資訊區塊}}\n\n{{回報連結}}' },
         { key: 'paymentReported', label: '匯款回報收到信', subject: '【已收到匯款回報】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n我們已收到您針對 {{活動名稱}} 的匯款回報，後五碼為 {{後五碼}}。\n目前狀態為等待對帳，管理員確認收款後會寄出正式報名成功信。' },
-        { key: 'paymentConfirmed', label: '收款確認信', subject: '【收款確認】{{活動名稱}} 報名成功！', body: '親愛的 {{姓名}} 您好，\n\n我們已收到您的款項，{{活動名稱}} 報名已正式成功。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n{{QRCode}}\n\n活動當天請出示信件中的 QR Code 完成報到。' },
-        { key: 'paymentReminder', label: '繳費提醒信', subject: '【繳費提醒】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n提醒您完成 {{活動名稱}} 的繳費。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n完成匯款後，請點擊下方按鈕回報匯款帳號後五碼：\n{{回報連結}}' },
-        { key: 'preEventReminder', label: '行前提醒信', subject: '【行前提醒】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n提醒您即將參加 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n{{QRCode}}\n\n活動當天請預先準備 QR Code 報到。' },
+        { key: 'paymentConfirmed', label: '收款確認信', subject: '【收款確認】{{活動名稱}} 報名成功！', body: '親愛的 {{姓名}} 您好，\n\n我們已收到您的款項，{{活動名稱}} 報名已正式成功。\n\n{{活動資訊區塊}}\n\n{{QRCode}}\n\n{{報到須知區塊}}\n\n活動當天請出示信件中的 QR Code 完成報到。' },
+        { key: 'paymentReminder', label: '繳費提醒信', subject: '【繳費提醒】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n提醒您完成 {{活動名稱}} 的繳費。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n{{活動資訊區塊}}\n\n{{匯款資訊區塊}}\n\n{{回報連結}}' },
+        { key: 'preEventReminder', label: '行前提醒信', subject: '【行前提醒】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n提醒您即將參加 {{活動名稱}}。\n\n{{活動資訊區塊}}\n\n{{QRCode}}\n\n{{報到須知區塊}}\n\n活動當天請預先準備 QR Code 報到。' },
         { key: 'surveyInvite', label: '滿意度問卷信', subject: '【活動回饋】期待聽到您對《{{活動名稱}}》的看法', body: '親愛的 {{姓名}} 您好，\n\n感謝您參加 {{活動名稱}}。\n誠摯邀請您填寫滿意度問卷：{{問卷連結}}\n\n您的回饋對我們非常重要。' },
-        { key: 'waitlistPromoted', label: '遞補成功信', subject: '【遞補成功通知】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n{{QRCode}}\n\n請留意報到資訊並準時出席。' },
+        { key: 'waitlistPromoted', label: '遞補成功信', subject: '【遞補成功通知】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n\n{{活動資訊區塊}}\n\n{{QRCode}}\n\n{{報到須知區塊}}\n\n請留意報到資訊並準時出席。' },
         { key: 'cancelled', label: '取消報名信', subject: '【報名取消確認】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n我們已收到您的取消申請，{{活動名稱}} 的報名已取消。\n感謝您主動告知，期待未來再相見。' }
     ];
 
@@ -221,27 +221,33 @@ document.addEventListener('DOMContentLoaded', () => {
             defaults[key] = { ...defaults[key], ...savedTemplates[key] };
         });
         const oldRegistrationBody = '親愛的 {{姓名}} 您好，\n\n您已成功報名 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n報名序號：{{報名序號}}\n請留意活動通知，期待與您相見。';
+        const oldRegistrationBodyWithQr = '親愛的 {{姓名}} 您好，\n\n您已成功報名 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n報名序號：{{報名序號}}\n\n{{QRCode}}\n\n請留意活動通知，期待與您相見。';
         const oldPaymentConfirmedBody = '親愛的 {{姓名}} 您好，\n\n我們已收到您的款項，{{活動名稱}} 報名已正式成功。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n活動當天請出示信件中的 QR Code 完成報到。';
+        const oldPaymentConfirmedBodyWithQr = '親愛的 {{姓名}} 您好，\n\n我們已收到您的款項，{{活動名稱}} 報名已正式成功。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n{{QRCode}}\n\n活動當天請出示信件中的 QR Code 完成報到。';
         const oldPreEventReminderBody = '親愛的 {{姓名}} 您好，\n\n提醒您即將參加 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n活動當天請預先準備 QR Code 報到。';
-        if (defaults.registrationSuccess?.body === oldRegistrationBody) {
+        const oldPreEventReminderBodyWithQr = '親愛的 {{姓名}} 您好，\n\n提醒您即將參加 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n{{QRCode}}\n\n活動當天請預先準備 QR Code 報到。';
+        if (defaults.registrationSuccess?.body === oldRegistrationBody || defaults.registrationSuccess?.body === oldRegistrationBodyWithQr) {
             defaults.registrationSuccess.body = EMAIL_TEMPLATE_CONFIG.find(item => item.key === 'registrationSuccess').body;
         }
-        if (defaults.paymentConfirmed?.body === oldPaymentConfirmedBody) {
+        if (defaults.paymentConfirmed?.body === oldPaymentConfirmedBody || defaults.paymentConfirmed?.body === oldPaymentConfirmedBodyWithQr) {
             defaults.paymentConfirmed.body = EMAIL_TEMPLATE_CONFIG.find(item => item.key === 'paymentConfirmed').body;
         }
-        if (defaults.preEventReminder?.body === oldPreEventReminderBody) {
+        if (defaults.preEventReminder?.body === oldPreEventReminderBody || defaults.preEventReminder?.body === oldPreEventReminderBodyWithQr) {
             defaults.preEventReminder.body = EMAIL_TEMPLATE_CONFIG.find(item => item.key === 'preEventReminder').body;
         }
         const oldPendingPaymentBody = '親愛的 {{姓名}} 您好，\n\n您已完成 {{活動名稱}} 的報名保留。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n完成匯款後請回報後五碼：{{回報連結}}';
+        const oldPendingPaymentBodyWithButton = '親愛的 {{姓名}} 您好，\n\n您已完成 {{活動名稱}} 的報名保留。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n完成匯款後，請點擊下方按鈕回報匯款帳號後五碼：\n{{回報連結}}';
         const oldPaymentReminderBody = '親愛的 {{姓名}} 您好，\n\n提醒您完成 {{活動名稱}} 的繳費。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n回報連結：{{回報連結}}';
+        const oldPaymentReminderBodyWithButton = '親愛的 {{姓名}} 您好，\n\n提醒您完成 {{活動名稱}} 的繳費。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n完成匯款後，請點擊下方按鈕回報匯款帳號後五碼：\n{{回報連結}}';
         const oldWaitlistPromotedBody = '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n請留意報到資訊並準時出席。';
-        if (defaults.pendingPayment?.body === oldPendingPaymentBody) {
+        const oldWaitlistPromotedBodyWithQr = '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n{{QRCode}}\n\n請留意報到資訊並準時出席。';
+        if (defaults.pendingPayment?.body === oldPendingPaymentBody || defaults.pendingPayment?.body === oldPendingPaymentBodyWithButton) {
             defaults.pendingPayment.body = EMAIL_TEMPLATE_CONFIG.find(item => item.key === 'pendingPayment').body;
         }
-        if (defaults.paymentReminder?.body === oldPaymentReminderBody) {
+        if (defaults.paymentReminder?.body === oldPaymentReminderBody || defaults.paymentReminder?.body === oldPaymentReminderBodyWithButton) {
             defaults.paymentReminder.body = EMAIL_TEMPLATE_CONFIG.find(item => item.key === 'paymentReminder').body;
         }
-        if (defaults.waitlistPromoted?.body === oldWaitlistPromotedBody) {
+        if (defaults.waitlistPromoted?.body === oldWaitlistPromotedBody || defaults.waitlistPromoted?.body === oldWaitlistPromotedBodyWithQr) {
             defaults.waitlistPromoted.body = EMAIL_TEMPLATE_CONFIG.find(item => item.key === 'waitlistPromoted').body;
         }
         return defaults;
@@ -317,6 +323,9 @@ document.addEventListener('DOMContentLoaded', () => {
             '後五碼': regData.paymentLast5 || extra.paymentLast5 || '',
             'QRCode': '__QR_CODE_BLOCK__',
             'QR Code': '__QR_CODE_BLOCK__',
+            '活動資訊區塊': '__EVENT_INFO_BLOCK__',
+            '報到須知區塊': '__CHECKIN_NOTICE_BLOCK__',
+            '匯款資訊區塊': '__PAYMENT_INFO_BLOCK__',
             ...extra
         };
     }
@@ -350,10 +359,13 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>`;
     }
 
-    function injectRichEmailBlocks(html, regData) {
+    function injectRichEmailBlocks(html, regData, eventData = {}, templateKey = '') {
         return html
             .replace(/__QR_CODE_BLOCK__/g, buildQrCodeHtml(regData))
-            .replace(/__PAYMENT_REPORT_BUTTON__/g, buildPaymentReportButtonHtml(regData));
+            .replace(/__PAYMENT_REPORT_BUTTON__/g, buildPaymentReportButtonHtml(regData))
+            .replace(/__EVENT_INFO_BLOCK__/g, buildEventInfoBlockHtml(regData, eventData, templateKey))
+            .replace(/__CHECKIN_NOTICE_BLOCK__/g, buildCheckinNoticeBlockHtml())
+            .replace(/__PAYMENT_INFO_BLOCK__/g, buildPaymentInfoBlockHtml(regData, eventData));
     }
 
     function buildPaymentReportButtonHtml(regData) {
@@ -369,12 +381,72 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>`;
     }
 
+    function getEmailStatusLabel(templateKey, regData = {}) {
+        const status = normalizeRegistrationStatus(regData.status);
+        const labelMap = {
+            registrationSuccess: '報名成功 (Confirmed)',
+            pendingPayment: '待繳費 (Pending)',
+            paymentReported: '等待對帳',
+            paymentConfirmed: '報名成功 (Confirmed)',
+            paymentReminder: status === 'payment_expired' ? '已逾期' : '待繳費 (Pending)',
+            preEventReminder: '報名成功 (Confirmed)',
+            surveyInvite: '已參加',
+            waitlistPromoted: '遞補成功 (Confirmed)',
+            cancelled: '已取消參加'
+        };
+        return labelMap[templateKey] || regData.statusLabel || status || '已報名';
+    }
+
+    function buildEventInfoBlockHtml(regData, eventData, templateKey) {
+        const accentColor = '#d97706';
+        const eventName = eventData?.name || regData.eventName || '';
+        const eventDate = regData.eventDateRange || formatEventDateRange(eventData || regData);
+        const eventTime = eventData?.time || regData.eventTime || '';
+        const serial = (regData.id || '').substring(0, 8).toUpperCase();
+        const statusLabel = getEmailStatusLabel(templateKey, regData);
+        return `
+        <div style="background-color:#ffffff; padding:25px; border-radius:16px; border:1px solid #eee; margin:24px 0 30px; box-shadow:0 4px 12px rgba(0,0,0,0.02);">
+            <h3 style="margin:0 0 15px 0; font-size:18px; color:#4a3728; border-bottom:2px solid ${accentColor}; display:inline-block; padding-bottom:5px;">📋 活動資訊</h3>
+            <table style="width:100%; border-collapse:collapse; font-size:15px; margin-top:15px;">
+                <tr><td style="padding:10px 0; color:#8d7a6b; width:100px;">目前狀態</td><td style="padding:10px 0; font-weight:bold; color:${accentColor};">${escapeHtml(statusLabel)}</td></tr>
+                <tr><td style="padding:10px 0; color:#8d7a6b;">活動名稱</td><td style="padding:10px 0; font-weight:bold;">${escapeHtml(eventName)}</td></tr>
+                <tr><td style="padding:10px 0; color:#8d7a6b;">活動日期</td><td style="padding:10px 0; font-weight:bold;">${escapeHtml(eventDate)}</td></tr>
+                <tr><td style="padding:10px 0; color:#8d7a6b;">活動時間</td><td style="padding:10px 0; font-weight:bold;">${escapeHtml(eventTime)}</td></tr>
+                <tr><td style="padding:10px 0; color:#8d7a6b;">報名序號</td><td style="padding:10px 0; font-family:monospace; font-size:18px; color:#4a3728;">${escapeHtml(serial)}</td></tr>
+            </table>
+        </div>`;
+    }
+
+    function buildCheckinNoticeBlockHtml() {
+        return `
+        <div style="border:1px solid #e5e0d8; border-radius:12px; padding:20px; background-color:#ffffff; margin:24px 0 25px;">
+            <h4 style="margin:0 0 12px 0; font-size:15px; color:#4a3728;">📍 報到須知</h4>
+            <ul style="margin:0; padding-left:20px; font-size:14px; color:#6b5a4d; line-height:1.8;">
+                <li style="margin-bottom:5px;">活動當天請<strong>預先開啟並準備好此 QR Code</strong>，或憑「報名姓名」及「手機末三碼」報到即可。</li>
+                <li style="margin-bottom:5px;">建議您提早於活動開始前 <strong>10 分鐘</strong> 抵達現場。</li>
+                <li>為了維護活動品質，活動開始 15 分鐘後將停止報到。</li>
+            </ul>
+        </div>`;
+    }
+
+    function buildPaymentInfoBlockHtml(regData, eventData) {
+        const bankInfo = eventData?.bankInfo || '暫無匯款帳號資訊';
+        const paymentNote = eventData?.paymentNote || '';
+        return `
+        <div style="border:1px dashed #d97706; border-radius:12px; padding:20px; background-color:#fefce8; margin:24px 0 25px;">
+            <h4 style="margin:0 0 12px 0; font-size:15px; color:#d97706;">匯款帳號資訊</h4>
+            <div style="font-size:14px; color:#6b5a4d; line-height:1.8; white-space:pre-wrap; font-family:monospace;">${escapeHtml(bankInfo)}</div>
+            <p style="margin:12px 0 0 0; font-size:14px; color:#8a4b0f;"><strong>繳費期限：</strong>${escapeHtml(formatDateTimeTW(regData.paymentDueAt))}</p>
+            ${paymentNote ? `<p style="margin:12px 0 0 0; font-size:14px; color:#8a4b0f;"><strong>注意事項：</strong>${escapeHtml(paymentNote)}</p>` : ''}
+        </div>`;
+    }
+
     function buildTemplatedEmail(key, regData, eventData, fallbackSubject, fallbackHtml, extra = {}) {
         const tpl = getEmailTemplate(eventData, key);
         if (tpl && tpl.enabled === false) return null;
         const vars = buildEmailVars(regData, eventData, extra);
         const subject = tpl?.subject ? applyEmailTemplateText(tpl.subject, vars) : fallbackSubject;
-        const messageHtml = tpl?.body ? injectRichEmailBlocks(plainTextToEmailHtml(applyEmailTemplateText(tpl.body, vars)), regData) : fallbackHtml;
+        const messageHtml = tpl?.body ? injectRichEmailBlocks(plainTextToEmailHtml(applyEmailTemplateText(tpl.body, vars)), regData, eventData, key) : fallbackHtml;
         return { subject, messageHtml };
     }
 
@@ -422,7 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const tpl = currentEditingEmailTemplates[key] || createDefaultEmailTemplates()[key] || {};
         const vars = buildEmailVars(regData, eventData, { paymentLast5: '12345' });
         const subject = applyEmailTemplateText(tpl.subject || '', vars);
-        const messageHtml = injectRichEmailBlocks(plainTextToEmailHtml(applyEmailTemplateText(tpl.body || '', vars)), regData);
+        const messageHtml = injectRichEmailBlocks(plainTextToEmailHtml(applyEmailTemplateText(tpl.body || '', vars)), regData, eventData, key);
         return { subject, messageHtml };
     }
 
