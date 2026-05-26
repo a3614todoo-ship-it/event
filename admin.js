@@ -171,14 +171,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentEditingEmailTemplates = {};
 
     const EMAIL_TEMPLATE_CONFIG = [
-        { key: 'registrationSuccess', label: '報名成功信', subject: '【活動報名成功通知】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n您已成功報名 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n報名序號：{{報名序號}}\n請留意活動通知，期待與您相見。' },
-        { key: 'pendingPayment', label: '待繳費通知信', subject: '【繳費通知】請完成《{{活動名稱}}》活動報名繳費', body: '親愛的 {{姓名}} 您好，\n\n您已完成 {{活動名稱}} 的報名保留。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n完成匯款後請回報後五碼：{{回報連結}}' },
+        { key: 'registrationSuccess', label: '報名成功信', subject: '【活動報名成功通知】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n您已成功報名 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n報名序號：{{報名序號}}\n\n{{QRCode}}\n\n請留意活動通知，期待與您相見。' },
+        { key: 'pendingPayment', label: '待繳費通知信', subject: '【繳費通知】請完成《{{活動名稱}}》活動報名繳費', body: '親愛的 {{姓名}} 您好，\n\n您已完成 {{活動名稱}} 的報名保留。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n完成匯款後，請點擊下方按鈕回報匯款帳號後五碼：\n{{回報連結}}' },
         { key: 'paymentReported', label: '匯款回報收到信', subject: '【已收到匯款回報】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n我們已收到您針對 {{活動名稱}} 的匯款回報，後五碼為 {{後五碼}}。\n目前狀態為等待對帳，管理員確認收款後會寄出正式報名成功信。' },
-        { key: 'paymentConfirmed', label: '收款確認信', subject: '【收款確認】{{活動名稱}} 報名成功！', body: '親愛的 {{姓名}} 您好，\n\n我們已收到您的款項，{{活動名稱}} 報名已正式成功。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n活動當天請出示信件中的 QR Code 完成報到。' },
-        { key: 'paymentReminder', label: '繳費提醒信', subject: '【繳費提醒】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n提醒您完成 {{活動名稱}} 的繳費。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n回報連結：{{回報連結}}' },
-        { key: 'preEventReminder', label: '行前提醒信', subject: '【行前提醒】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n提醒您即將參加 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n活動當天請預先準備 QR Code 報到。' },
+        { key: 'paymentConfirmed', label: '收款確認信', subject: '【收款確認】{{活動名稱}} 報名成功！', body: '親愛的 {{姓名}} 您好，\n\n我們已收到您的款項，{{活動名稱}} 報名已正式成功。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n{{QRCode}}\n\n活動當天請出示信件中的 QR Code 完成報到。' },
+        { key: 'paymentReminder', label: '繳費提醒信', subject: '【繳費提醒】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n提醒您完成 {{活動名稱}} 的繳費。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n完成匯款後，請點擊下方按鈕回報匯款帳號後五碼：\n{{回報連結}}' },
+        { key: 'preEventReminder', label: '行前提醒信', subject: '【行前提醒】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n提醒您即將參加 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n{{QRCode}}\n\n活動當天請預先準備 QR Code 報到。' },
         { key: 'surveyInvite', label: '滿意度問卷信', subject: '【活動回饋】期待聽到您對《{{活動名稱}}》的看法', body: '親愛的 {{姓名}} 您好，\n\n感謝您參加 {{活動名稱}}。\n誠摯邀請您填寫滿意度問卷：{{問卷連結}}\n\n您的回饋對我們非常重要。' },
-        { key: 'waitlistPromoted', label: '遞補成功信', subject: '【遞補成功通知】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n請留意報到資訊並準時出席。' },
+        { key: 'waitlistPromoted', label: '遞補成功信', subject: '【遞補成功通知】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n{{QRCode}}\n\n請留意報到資訊並準時出席。' },
         { key: 'cancelled', label: '取消報名信', subject: '【報名取消確認】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n我們已收到您的取消申請，{{活動名稱}} 的報名已取消。\n感謝您主動告知，期待未來再相見。' }
     ];
 
@@ -220,6 +220,30 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.keys(savedTemplates || {}).forEach(key => {
             defaults[key] = { ...defaults[key], ...savedTemplates[key] };
         });
+        const oldRegistrationBody = '親愛的 {{姓名}} 您好，\n\n您已成功報名 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n報名序號：{{報名序號}}\n請留意活動通知，期待與您相見。';
+        const oldPaymentConfirmedBody = '親愛的 {{姓名}} 您好，\n\n我們已收到您的款項，{{活動名稱}} 報名已正式成功。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n活動當天請出示信件中的 QR Code 完成報到。';
+        const oldPreEventReminderBody = '親愛的 {{姓名}} 您好，\n\n提醒您即將參加 {{活動名稱}}。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n活動當天請預先準備 QR Code 報到。';
+        if (defaults.registrationSuccess?.body === oldRegistrationBody) {
+            defaults.registrationSuccess.body = EMAIL_TEMPLATE_CONFIG.find(item => item.key === 'registrationSuccess').body;
+        }
+        if (defaults.paymentConfirmed?.body === oldPaymentConfirmedBody) {
+            defaults.paymentConfirmed.body = EMAIL_TEMPLATE_CONFIG.find(item => item.key === 'paymentConfirmed').body;
+        }
+        if (defaults.preEventReminder?.body === oldPreEventReminderBody) {
+            defaults.preEventReminder.body = EMAIL_TEMPLATE_CONFIG.find(item => item.key === 'preEventReminder').body;
+        }
+        const oldPendingPaymentBody = '親愛的 {{姓名}} 您好，\n\n您已完成 {{活動名稱}} 的報名保留。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n完成匯款後請回報後五碼：{{回報連結}}';
+        const oldPaymentReminderBody = '親愛的 {{姓名}} 您好，\n\n提醒您完成 {{活動名稱}} 的繳費。\n應繳金額：{{應繳金額}}\n繳費期限：{{繳費期限}}\n\n匯款資訊：\n{{匯款資訊}}\n\n注意事項：\n{{付款注意事項}}\n\n回報連結：{{回報連結}}';
+        const oldWaitlistPromotedBody = '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n活動日期：{{活動日期}}\n活動時間：{{活動時間}}\n活動地點：{{活動地點}}\n\n請留意報到資訊並準時出席。';
+        if (defaults.pendingPayment?.body === oldPendingPaymentBody) {
+            defaults.pendingPayment.body = EMAIL_TEMPLATE_CONFIG.find(item => item.key === 'pendingPayment').body;
+        }
+        if (defaults.paymentReminder?.body === oldPaymentReminderBody) {
+            defaults.paymentReminder.body = EMAIL_TEMPLATE_CONFIG.find(item => item.key === 'paymentReminder').body;
+        }
+        if (defaults.waitlistPromoted?.body === oldWaitlistPromotedBody) {
+            defaults.waitlistPromoted.body = EMAIL_TEMPLATE_CONFIG.find(item => item.key === 'waitlistPromoted').body;
+        }
         return defaults;
     }
 
@@ -239,6 +263,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         <input type="text" value="${escapeHtml(tpl.subject || '')}" oninput="updateEmailTemplate('${item.key}', 'subject', this.value)" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-color); margin:6px 0 12px;">
                         <label style="font-size:0.9rem; color:var(--text-muted);">信件內容</label>
                         <textarea rows="6" oninput="updateEmailTemplate('${item.key}', 'body', this.value)" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-color); line-height:1.6;">${escapeHtml(tpl.body || '')}</textarea>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+                            <button type="button" class="btn-secondary" onclick="previewEmailTemplate('${item.key}')" style="padding:7px 12px; font-size:0.85rem;">
+                                <i class="fas fa-eye"></i> 預覽信件
+                            </button>
+                            <button type="button" class="btn-secondary" onclick="sendTestEmailTemplate('${item.key}')" style="padding:7px 12px; font-size:0.85rem; border-color:#10b981; color:#10b981;">
+                                <i class="fas fa-paper-plane"></i> 寄測試信給自己
+                            </button>
+                        </div>
                     </div>
                 </details>
             `;
@@ -278,10 +310,13 @@ document.addEventListener('DOMContentLoaded', () => {
             '繳費期限': formatDateTimeTW(regData.paymentDueAt),
             '匯款資訊': eventData?.bankInfo || '',
             '付款注意事項': eventData?.paymentNote || '',
-            '回報連結': `${baseUrl}/payment.html?id=${regData.id}`,
+            '回報連結': '__PAYMENT_REPORT_BUTTON__',
+            '回報網址': `${baseUrl}/payment.html?id=${regData.id}`,
             '取消連結': `${baseUrl}/cancel.html?id=${regData.id}&email=${regData.userEmail || ''}`,
             '問卷連結': `${baseUrl}/survey.html?id=${regData.id}`,
             '後五碼': regData.paymentLast5 || extra.paymentLast5 || '',
+            'QRCode': '__QR_CODE_BLOCK__',
+            'QR Code': '__QR_CODE_BLOCK__',
             ...extra
         };
     }
@@ -305,14 +340,174 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>`;
     }
 
+    function buildQrCodeHtml(regData) {
+        if (!regData?.id) return '';
+        return `
+        <div style="text-align:center; background:#ffffff; padding:30px; border-radius:16px; border:1px dashed #d97706; margin:24px 0;">
+            <p style="margin:0 0 15px 0; font-size:15px; font-weight:bold; color:#d97706;">您的報到 QR Code</p>
+            <img src="https://quickchart.io/chart?cht=qr&chs=180x180&chl=${encodeURIComponent(regData.id)}&choe=UTF-8" width="180" height="180" alt="QR Code" style="display:block; margin:0 auto;">
+            <p style="margin:15px 0 0 0; font-size:14px; color:#4a3728;">請於抵達現場時出示此 QR Code 報到</p>
+        </div>`;
+    }
+
+    function injectRichEmailBlocks(html, regData) {
+        return html
+            .replace(/__QR_CODE_BLOCK__/g, buildQrCodeHtml(regData))
+            .replace(/__PAYMENT_REPORT_BUTTON__/g, buildPaymentReportButtonHtml(regData));
+    }
+
+    function buildPaymentReportButtonHtml(regData) {
+        if (!regData?.id) return '';
+        const baseUrl = 'https://a3614todoo-ship-it.github.io/event';
+        const reportUrl = `${baseUrl}/payment.html?id=${encodeURIComponent(regData.id)}`;
+        return `
+        <div style="text-align:center; margin:28px 0;">
+            <a href="${reportUrl}" style="display:inline-block; background:#d97706; color:#ffffff; text-decoration:none; padding:14px 26px; border-radius:999px; font-weight:700; letter-spacing:1px;">
+                回報匯款後五碼
+            </a>
+            <p style="margin:12px 0 0 0; font-size:13px; color:#8d7a6b;">若按鈕無法開啟，請複製此連結：${reportUrl}</p>
+        </div>`;
+    }
+
     function buildTemplatedEmail(key, regData, eventData, fallbackSubject, fallbackHtml, extra = {}) {
         const tpl = getEmailTemplate(eventData, key);
         if (tpl && tpl.enabled === false) return null;
         const vars = buildEmailVars(regData, eventData, extra);
         const subject = tpl?.subject ? applyEmailTemplateText(tpl.subject, vars) : fallbackSubject;
-        const messageHtml = tpl?.body ? plainTextToEmailHtml(applyEmailTemplateText(tpl.body, vars)) : fallbackHtml;
+        const messageHtml = tpl?.body ? injectRichEmailBlocks(plainTextToEmailHtml(applyEmailTemplateText(tpl.body, vars)), regData) : fallbackHtml;
         return { subject, messageHtml };
     }
+
+    function getEmailTemplateLabel(key) {
+        return EMAIL_TEMPLATE_CONFIG.find(item => item.key === key)?.label || key;
+    }
+
+    function buildEventDraftFromForm() {
+        return {
+            id: document.getElementById('editEventId')?.value || 'test-event',
+            name: document.getElementById('editEventName')?.value || '測試活動',
+            date: document.getElementById('editEventStartDate')?.value || new Date().toISOString().slice(0, 10),
+            startDate: document.getElementById('editEventStartDate')?.value || new Date().toISOString().slice(0, 10),
+            endDate: document.getElementById('editEventEndDate')?.value || document.getElementById('editEventStartDate')?.value || new Date().toISOString().slice(0, 10),
+            time: document.getElementById('editEventTime')?.value || '14:00-16:00',
+            location: document.getElementById('editEventLocation')?.value || '藝境空間',
+            fee: parseInt(document.getElementById('editEventFee')?.value, 10) || 0,
+            bankInfo: document.getElementById('editEventBankInfo')?.value || '匯款銀行：測試銀行\n匯款帳號：000-000-000',
+            paymentNote: document.getElementById('editEventPaymentNote')?.value || '此為測試信件，請勿實際匯款。',
+            emailTemplates: currentEditingEmailTemplates
+        };
+    }
+
+    function buildSampleRegistrationData(eventData) {
+        const dueAt = new Date();
+        dueAt.setDate(dueAt.getDate() + 3);
+        return {
+            id: 'TEST20260526',
+            userName: '測試收件人',
+            userEmail: '',
+            userPhone: '0912345678',
+            eventId: eventData.id || 'test-event',
+            eventName: eventData.name || '測試活動',
+            eventDateRange: formatEventDateRange(eventData),
+            eventTime: eventData.time || '14:00-16:00',
+            eventLocation: eventData.location || '藝境空間',
+            paymentDueAt: dueAt.toISOString(),
+            paymentLast5: '12345'
+        };
+    }
+
+    function buildEmailTemplatePreview(key) {
+        const eventData = buildEventDraftFromForm();
+        const regData = buildSampleRegistrationData(eventData);
+        const tpl = currentEditingEmailTemplates[key] || createDefaultEmailTemplates()[key] || {};
+        const vars = buildEmailVars(regData, eventData, { paymentLast5: '12345' });
+        const subject = applyEmailTemplateText(tpl.subject || '', vars);
+        const messageHtml = injectRichEmailBlocks(plainTextToEmailHtml(applyEmailTemplateText(tpl.body || '', vars)), regData);
+        return { subject, messageHtml };
+    }
+
+    window.previewEmailTemplate = function(key) {
+        const preview = buildEmailTemplatePreview(key);
+        const previewWindow = window.open('', '_blank', 'width=760,height=820');
+        if (!previewWindow) {
+            alert('瀏覽器阻擋了預覽視窗，請允許彈出視窗後再試一次。');
+            return;
+        }
+        previewWindow.document.write(`
+            <!doctype html>
+            <html lang="zh-Hant">
+            <head>
+                <meta charset="utf-8">
+                <title>${escapeHtml(getEmailTemplateLabel(key))}預覽</title>
+                <style>
+                    body { margin:0; background:#f5f1ea; font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif; color:#4a3728; }
+                    .preview-bar { position:sticky; top:0; z-index:1; background:#fff; border-bottom:1px solid #e5e0d8; padding:14px 18px; }
+                    .preview-bar strong { color:#d97706; }
+                    .subject { margin-top:6px; font-size:14px; color:#6b5a4d; }
+                </style>
+            </head>
+            <body>
+                <div class="preview-bar">
+                    <strong>${escapeHtml(getEmailTemplateLabel(key))}</strong>
+                    <div class="subject">主旨：${escapeHtml(preview.subject)}</div>
+                </div>
+                ${preview.messageHtml}
+            </body>
+            </html>
+        `);
+        previewWindow.document.close();
+    };
+
+    window.sendTestEmailTemplate = async function(key) {
+        if (typeof emailjs === 'undefined') {
+            alert('EmailJS 尚未載入，無法寄送測試信。');
+            return;
+        }
+        const savedEmail = localStorage.getItem('emailTemplateTestEmail') || '';
+        const toEmail = prompt('請輸入要接收測試信的 Email：', savedEmail);
+        if (!toEmail) return;
+        localStorage.setItem('emailTemplateTestEmail', toEmail);
+        const preview = buildEmailTemplatePreview(key);
+        try {
+            await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+                to_email: toEmail,
+                to_name: '測試收件人',
+                subject: `[測試] ${preview.subject}`,
+                message_html: preview.messageHtml
+            });
+            alert(`已寄出「${getEmailTemplateLabel(key)}」測試信到 ${toEmail}`);
+        } catch (err) {
+            console.error('寄送測試信失敗', err);
+            alert('測試信寄送失敗，請查看 Console 或 EmailJS 設定。');
+        }
+    };
+
+    window.resetEmailTemplatesToDefault = function() {
+        if (!confirm('確定要把此活動的所有信件模板恢復成系統預設嗎？目前尚未儲存的模板修改會被覆蓋。')) return;
+        currentEditingEmailTemplates = createDefaultEmailTemplates();
+        renderEmailTemplateEditors();
+        alert('已恢復預設模板，請記得儲存活動。');
+    };
+
+    window.applyEmailTemplatesToAllEvents = async function() {
+        if (!confirm('確定要把目前這組信件模板套用到所有活動嗎？此動作會更新所有活動的信件模板設定。')) return;
+        try {
+            const snapshot = await db.collection('events').get();
+            if (snapshot.empty) {
+                alert('目前沒有可套用的活動。');
+                return;
+            }
+            const batch = db.batch();
+            snapshot.forEach(doc => {
+                batch.update(doc.ref, { emailTemplates: currentEditingEmailTemplates });
+            });
+            await batch.commit();
+            alert(`已套用到 ${snapshot.size} 個活動。`);
+        } catch (err) {
+            console.error('套用模板到所有活動失敗', err);
+            alert('套用失敗，請稍後再試或查看 Console。');
+        }
+    };
 
     closeBtns.forEach(btn => {
         btn.addEventListener('click', () => {

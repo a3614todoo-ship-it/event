@@ -42,9 +42,55 @@ function isPastDue(isoString) {
     return !Number.isNaN(dueAt.getTime()) && dueAt.getTime() < Date.now();
 }
 
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function plainTextToEmailHtml(text) {
+    return `
+    <div style="background-color:#f5f1ea; padding:40px 20px; font-family:system-ui,-apple-system,sans-serif;">
+        <div style="max-width:600px; margin:0 auto; background:#fdfbf7; border-radius:24px; overflow:hidden; border:1px solid #e5e0d8;">
+            <div style="background:#fff; padding:36px 20px; text-align:center; border-bottom:1px solid #f1ece4;">
+                <h1 style="margin:0; font-size:24px; color:#4a3728; letter-spacing:5px;">藝 境 空 間</h1>
+                <p style="margin:10px 0 0 0; color:#d97706; letter-spacing:2px;">Payment Report Received</p>
+            </div>
+            <div style="padding:36px; color:#4a3728; line-height:1.8; font-size:15px;">${escapeHtml(text).replace(/\n/g, '<br>')}</div>
+        </div>
+    </div>`;
+}
+
+function buildEmailVars(regData, eventData, last5Digits) {
+    const baseUrl = 'https://a3614todoo-ship-it.github.io/event';
+    return {
+        '姓名': regData.userName || '',
+        '活動名稱': eventData?.name || regData.eventName || '',
+        '活動日期': regData.eventDateRange || eventData?.startDate || eventData?.date || '',
+        '活動時間': eventData?.time || regData.eventTime || '',
+        '活動地點': eventData?.location || regData.eventLocation || '',
+        '報名序號': (regData.id || '').substring(0, 8).toUpperCase(),
+        '應繳金額': `NT$ ${((eventData?.fee || 0)).toLocaleString()}`,
+        '繳費期限': formatDateTimeTW(regData.paymentDueAt),
+        '匯款資訊': eventData?.bankInfo || '',
+        '付款注意事項': eventData?.paymentNote || '',
+        '回報連結': `${baseUrl}/payment.html?id=${regData.id}`,
+        '取消連結': `${baseUrl}/cancel.html?id=${regData.id}&email=${regData.userEmail || ''}`,
+        '後五碼': last5Digits || regData.paymentLast5 || ''
+    };
+}
+
+function applyEmailTemplateText(text, vars) {
+    return String(text || '').replace(/\{\{([^}]+)\}\}/g, (_, key) => vars[String(key).trim()] ?? '');
+}
+
 function sendPaymentReportReceivedEmail(regData, eventData, last5Digits) {
     if (typeof emailjs === 'undefined') return Promise.resolve();
     const eventName = eventData.name || regData.eventName || '活動';
+    const customTemplate = eventData?.emailTemplates?.paymentReported;
+    if (customTemplate?.enabled === false) return Promise.resolve('paymentReported disabled');
 
     const emailHtml = `
     <div style="background-color:#f5f1ea; padding:40px 20px; font-family:system-ui,-apple-system,sans-serif;">
@@ -66,11 +112,19 @@ function sendPaymentReportReceivedEmail(regData, eventData, last5Digits) {
         </div>
     </div>`;
 
+    const vars = buildEmailVars(regData, eventData, last5Digits);
+    const subject = customTemplate?.subject
+        ? applyEmailTemplateText(customTemplate.subject, vars)
+        : `【已收到匯款回報】${eventName}`;
+    const messageHtml = customTemplate?.body
+        ? plainTextToEmailHtml(applyEmailTemplateText(customTemplate.body, vars))
+        : emailHtml;
+
     return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
         to_email: regData.userEmail,
         to_name: regData.userName,
-        subject: `【已收到匯款回報】${eventName}`,
-        message_html: emailHtml
+        subject,
+        message_html: messageHtml
     });
 }
 

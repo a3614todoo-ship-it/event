@@ -397,9 +397,17 @@
                         可針對此活動設定每個階段是否寄信與信件文字。可用變數：
                         <code>{{姓名}}</code> <code>{{活動名稱}}</code> <code>{{活動日期}}</code> <code>{{活動時間}}</code>
                         <code>{{活動地點}}</code> <code>{{報名序號}}</code> <code>{{應繳金額}}</code> <code>{{繳費期限}}</code>
-                        <code>{{匯款資訊}}</code> <code>{{付款注意事項}}</code> <code>{{回報連結}}</code> <code>{{取消連結}}</code>
-                        <code>{{問卷連結}}</code>
+                        <code>{{匯款資訊}}</code> <code>{{付款注意事項}}</code> <code>{{回報連結}}</code> <code>{{回報網址}}</code> <code>{{取消連結}}</code>
+                          <code>{{問卷連結}}</code> <code>{{QRCode}}</code>
                     </p>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+                        <button type="button" class="btn-secondary" onclick="applyEmailTemplatesToAllEvents()" style="padding:8px 14px; font-size:0.9rem;">
+                            <i class="fas fa-copy"></i> 套用到所有活動
+                        </button>
+                        <button type="button" class="btn-secondary" onclick="resetEmailTemplatesToDefault()" style="padding:8px 14px; font-size:0.9rem; border-color:#d97706; color:#d97706;">
+                            <i class="fas fa-undo"></i> 恢復預設模板
+                        </button>
+                    </div>
                     <div id="emailTemplatesContainer"></div>
                 </div>
 

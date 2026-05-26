@@ -119,6 +119,35 @@ function plainTextToEmailHtml(text) {
     </div>`;
 }
 
+function buildQrCodeHtml(data) {
+    if (!data?.id) return '';
+    return `
+    <div style="text-align:center; background:#ffffff; padding:30px; border-radius:16px; border:1px dashed #d97706; margin:24px 0;">
+        <p style="margin:0 0 15px 0; font-size:15px; font-weight:bold; color:#d97706;">您的報到 QR Code</p>
+        <img src="https://quickchart.io/chart?cht=qr&chs=180x180&chl=${encodeURIComponent(data.id)}&choe=UTF-8" width="180" height="180" alt="QR Code" style="display:block; margin:0 auto;">
+        <p style="margin:15px 0 0 0; font-size:14px; color:#4a3728;">請於抵達現場時出示此 QR Code 報到</p>
+    </div>`;
+}
+
+function injectRichEmailBlocks(html, data) {
+    return html
+        .replace(/__QR_CODE_BLOCK__/g, buildQrCodeHtml(data))
+        .replace(/__PAYMENT_REPORT_BUTTON__/g, buildPaymentReportButtonHtml(data));
+}
+
+function buildPaymentReportButtonHtml(data) {
+    if (!data?.id) return '';
+    const baseUrl = 'https://a3614todoo-ship-it.github.io/event';
+    const reportUrl = `${baseUrl}/payment.html?id=${encodeURIComponent(data.id)}`;
+    return `
+    <div style="text-align:center; margin:28px 0;">
+        <a href="${reportUrl}" style="display:inline-block; background:#d97706; color:#ffffff; text-decoration:none; padding:14px 26px; border-radius:999px; font-weight:700; letter-spacing:1px;">
+            回報匯款後五碼
+        </a>
+        <p style="margin:12px 0 0 0; font-size:13px; color:#8d7a6b;">若按鈕無法開啟，請複製此連結：${reportUrl}</p>
+    </div>`;
+}
+
 function buildEmailVars(data, eventData) {
     const baseUrl = 'https://a3614todoo-ship-it.github.io/event';
     return {
@@ -132,8 +161,11 @@ function buildEmailVars(data, eventData) {
         '繳費期限': formatDateTimeTW(data.paymentDueAt),
         '匯款資訊': eventData?.bankInfo || '',
         '付款注意事項': eventData?.paymentNote || '',
-        '回報連結': `${baseUrl}/payment.html?id=${data.id}`,
-        '取消連結': `${baseUrl}/cancel.html?id=${data.id}&email=${data.userEmail || ''}`
+        '回報連結': '__PAYMENT_REPORT_BUTTON__',
+        '回報網址': `${baseUrl}/payment.html?id=${data.id}`,
+        '取消連結': `${baseUrl}/cancel.html?id=${data.id}&email=${data.userEmail || ''}`,
+        'QRCode': '__QR_CODE_BLOCK__',
+        'QR Code': '__QR_CODE_BLOCK__'
     };
 }
 
@@ -647,7 +679,7 @@ function sendRegistrationEmail(data, eventData) {
         subjectLine = applyEmailTemplateText(customTemplate.subject, buildEmailVars(data, eventData));
     }
     if (customTemplate?.body) {
-        emailHtml = plainTextToEmailHtml(applyEmailTemplateText(customTemplate.body, buildEmailVars(data, eventData)));
+        emailHtml = injectRichEmailBlocks(plainTextToEmailHtml(applyEmailTemplateText(customTemplate.body, buildEmailVars(data, eventData))), data);
     }
 
     const templateParams = {
