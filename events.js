@@ -258,7 +258,7 @@ function buildPaymentInfoBlockHtml(data, eventData) {
 function buildEmailFooterBlockHtml(templateKey) {
     const footerMap = {
         registrationSuccess: '期待在藝境空間與您相見！',
-        pendingPayment: '完成繳款後，系統將會發送正式報名成功信件。',
+        pendingPayment: '完成繳款並成功對帳後，系統將會發送正式報名成功信件。',
         waitlistPromoted: '請留意報到資訊並準時出席。'
     };
     return `
@@ -846,7 +846,7 @@ function generateEventEmailHTML(data, eventData) {
         subTitle = 'Pending Payment';
         mainDesc = `感謝您的報名！本活動需繳交費用 <strong>NT$ ${(eventData?.fee || 0).toLocaleString()}</strong>，請於 <strong>${formatDateTimeTW(data.paymentDueAt)}</strong> 前完成匯款，並回報您的帳號後五碼以保留名額。`;
         statusLabel = '待繳費 (Pending)';
-        footerText = '完成繳款後，系統將會發送正式報名成功信件。';
+        footerText = '完成繳款並成功對帳後，系統將會發送正式報名成功信件。';
     } else {
         titleText = '報名成功確認';
         subTitle = 'Registration Confirmed';

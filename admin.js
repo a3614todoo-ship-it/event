@@ -471,7 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function buildEmailFooterBlockHtml(templateKey) {
         const footerMap = {
             registrationSuccess: '期待在藝境空間與您相見！',
-            pendingPayment: '完成繳款後，系統將會發送正式報名成功信件。',
+            pendingPayment: '完成繳款並成功對帳後，系統將會發送正式報名成功信件。',
             paymentReported: '管理員確認收款後，系統將會發送正式報名成功信件。',
             paymentConfirmed: '活動當天請出示 QR Code 完成報到。',
             paymentReminder: '請於期限內完成繳費並回報匯款後五碼。',
