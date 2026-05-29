@@ -315,6 +315,15 @@
                     <input type="text" id="editEventLocation" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
                 </div>
 
+                <!-- 自訂報名表單欄位 (移至活動地點與活動圖片藝廊管理之間) -->
+                <div class="form-group" style="margin-top: 20px; background: rgba(217, 119, 6, 0.03); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <label style="font-weight: bold; color: var(--text-main); font-size: 1rem;"><i class="fas fa-edit text-accent"></i> 自訂報名表單欄位</label>
+                        <button type="button" id="addCustomFieldBtn" class="btn-secondary" style="padding: 5px 12px; font-size: 0.85rem; background: var(--text-main); color: #fff; border: none; font-weight: bold;"><i class="fas fa-plus"></i> 新增欄位</button>
+                    </div>
+                    <div id="customFieldsContainer"></div>
+                </div>
+
                 <!-- 活動圖片藝廊管理 (最多五張) -->
                 <div class="form-group" style="margin-top: 20px; background: rgba(0,0,0,0.02); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 15px;">
                     <label style="font-weight: bold; display: block; margin-bottom: 4px; color: var(--text-main);">活動圖片藝廊管理 (最多五張，支援路徑與本機上傳雙軌) *</label>
@@ -476,16 +485,6 @@
                     <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox" id="editEventIsActive" checked> 上架發佈</label>
                     <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox" id="editEventAllowWaitlist" checked> 開放候補</label>
                     <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox" id="editEventAutoPromote" checked> 自動遞補</label>
-                </div>
-
-                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 25px 0;">
-
-                <div class="form-group">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <label>自訂報名表單欄位</label>
-                        <button type="button" id="addCustomFieldBtn" class="btn-secondary" style="padding: 5px 12px; font-size: 0.85rem;">新增欄位</button>
-                    </div>
-                    <div id="customFieldsContainer"></div>
                 </div>
 
                 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 25px 0;">
