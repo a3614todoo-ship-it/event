@@ -162,13 +162,55 @@ window.toggleCustomFollowup = function(index) {
     const field = currentEvent?.customFields?.[index];
     if (!field) return;
     const selectedOption = document.querySelector(`input[name="customField_${index}_option"]:checked`);
-    const followupWrap = document.getElementById(`customField_${index}_followup_wrap`);
-    const followupInput = document.getElementById(`customField_${index}_followup`);
-    if (!followupWrap || !followupInput) return;
-    const shouldShow = Boolean(field.followupTrigger) && selectedOption?.value === field.followupTrigger;
-    followupWrap.style.display = shouldShow ? 'block' : 'none';
-    followupInput.required = shouldShow && field.followupRequired !== false;
-    if (!shouldShow) followupInput.value = '';
+    
+    // 獲取所有可能的補充欄位容器與輸入框
+    const allWraps = document.querySelectorAll(`[id^="customField_${index}_followup_wrap_"]`);
+    const allInputs = document.querySelectorAll(`[id^="customField_${index}_followup_"]`);
+    
+    // 先全部隱藏並重設 required
+    allWraps.forEach(w => w.style.display = 'none');
+    allInputs.forEach(input => {
+        input.required = false;
+        // 如果原本是顯示的且現在被切換走，才清空內容以防干涉，但這裡保持簡單即可
+    });
+
+    if (selectedOption) {
+        const optionVal = selectedOption.value;
+        let matchedOpt = null;
+
+        if (Array.isArray(field.optionsWithFollowup)) {
+            matchedOpt = field.optionsWithFollowup.find(o => o.value === optionVal);
+        } else {
+            // 舊資料 fallback 相容
+            const isTrigger = optionVal === field.followupTrigger;
+            if (isTrigger) {
+                matchedOpt = {
+                    hasExtra: true,
+                    extraLabel: field.followupLabel || '寄送地址',
+                    extraRequired: field.followupRequired !== false
+                };
+            }
+        }
+
+        if (matchedOpt && matchedOpt.hasExtra && matchedOpt.extraLabel) {
+            // 找到對應選項的那個特定 followup 容器
+            // 我們可以使用選項的 index 來標記
+            let optIdx = -1;
+            if (Array.isArray(field.optionsWithFollowup)) {
+                optIdx = field.optionsWithFollowup.findIndex(o => o.value === optionVal);
+            } else {
+                optIdx = 0; // 舊資料預設為 0
+            }
+
+            const activeWrap = document.getElementById(`customField_${index}_followup_wrap_${optIdx}`);
+            const activeInput = document.getElementById(`customField_${index}_followup_${optIdx}`);
+            
+            if (activeWrap && activeInput) {
+                activeWrap.style.display = 'block';
+                activeInput.required = matchedOpt.extraRequired;
+            }
+        }
+    }
 };
 
 function buildQrCodeHtml(data) {
@@ -621,26 +663,46 @@ function renderUI() {
                 }
 
                 if (f.type === 'select') {
-                    const options = getCustomFieldOptions(f);
-                    const followupLabel = f.followupLabel || '';
-                    const followupHtml = followupLabel ? `
-                        <div id="customField_${index}_followup_wrap" class="form-group" style="display:none; margin-top:12px;">
-                            <label for="customField_${index}_followup">${escapeHtml(followupLabel)}${f.followupRequired !== false ? '<span style="color:#ef4444; margin-left:3px;">*</span>' : ''}</label>
-                            <input type="text" id="customField_${index}_followup" name="${escapeHtml(followupLabel)}" placeholder="請填寫${escapeHtml(followupLabel)}">
-                        </div>
-                    ` : '';
+                    // 如果是舊的 select 資料結構，自動將 options 升級轉換為 optionsWithFollowup 物件陣列格式
+                    let optionsWithFollowup = f.optionsWithFollowup;
+                    if (!Array.isArray(optionsWithFollowup)) {
+                        const options = getCustomFieldOptions(f);
+                        optionsWithFollowup = options.map(opt => {
+                            const isTrigger = opt === f.followupTrigger;
+                            return {
+                                value: opt,
+                                hasExtra: isTrigger,
+                                extraLabel: isTrigger ? (f.followupLabel || '寄送地址') : '',
+                                extraRequired: isTrigger ? (f.followupRequired !== false) : false
+                            };
+                        });
+                    }
+
+                    // 遍歷 optionsWithFollowup 來渲染多個補充欄位容器
+                    const followupHtmls = optionsWithFollowup.map((opt, optIdx) => {
+                        if (opt.hasExtra && opt.extraLabel) {
+                            return `
+                            <div id="customField_${index}_followup_wrap_${optIdx}" class="form-group" style="display:none; margin-top:12px;">
+                                <label for="customField_${index}_followup_${optIdx}">${escapeHtml(opt.extraLabel)}${opt.extraRequired ? '<span style="color:#ef4444; margin-left:3px;">*</span>' : ''}</label>
+                                <input type="text" id="customField_${index}_followup_${optIdx}" data-label="${escapeHtml(opt.extraLabel)}" placeholder="請填寫${escapeHtml(opt.extraLabel)}">
+                            </div>
+                            `;
+                        }
+                        return '';
+                    }).join('');
+
                     return `
                     <div class="form-group">
                         <label>${escapeHtml(f.name)}${star}</label>
                         <div style="display:grid; gap:10px;">
-                            ${options.map((option, optionIndex) => `
-                                <label for="customField_${index}_${optionIndex}" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:1px solid #e5e0d8; border-radius:12px; background:#fcfaf8; cursor:pointer; margin:0;">
-                                    <input type="radio" id="customField_${index}_${optionIndex}" name="customField_${index}_option" value="${escapeHtml(option)}" ${isRequired} onchange="toggleCustomFollowup(${index})" style="width:18px; height:18px; flex:0 0 auto;">
-                                    <span>${escapeHtml(option)}</span>
+                            ${optionsWithFollowup.map((opt, optIdx) => `
+                                <label for="customField_${index}_${optIdx}" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:1px solid #e5e0d8; border-radius:12px; background:#fcfaf8; cursor:pointer; margin:0;">
+                                    <input type="radio" id="customField_${index}_${optIdx}" name="customField_${index}_option" value="${escapeHtml(opt.value)}" ${isRequired} onchange="toggleCustomFollowup(${index})" style="width:18px; height:18px; flex:0 0 auto;">
+                                    <span>${escapeHtml(opt.value)}</span>
                                 </label>
                             `).join('')}
                         </div>
-                        ${followupHtml}
+                        ${followupHtmls}
                     </div>
                     `;
                 }
@@ -747,11 +809,33 @@ function setupForm() {
             currentEvent.customFields.forEach((f, index) => {
                 if (f.type === 'select') {
                     const selectedOption = document.querySelector(`input[name="customField_${index}_option"]:checked`);
-                    customData[f.name] = selectedOption?.value || '';
-                    const followupInput = document.getElementById(`customField_${index}_followup`);
-                    const followupLabel = f.followupLabel || '';
-                    if (followupInput && followupLabel && followupInput.value.trim()) {
-                        customData[`${f.name} - ${followupLabel}`] = followupInput.value.trim();
+                    const selectedVal = selectedOption?.value || '';
+                    customData[f.name] = selectedVal;
+                    
+                    if (selectedVal) {
+                        // 找到對應的選項索引
+                        let optIdx = -1;
+                        let matchedOpt = null;
+                        if (Array.isArray(f.optionsWithFollowup)) {
+                            optIdx = f.optionsWithFollowup.findIndex(o => o.value === selectedVal);
+                            matchedOpt = f.optionsWithFollowup[optIdx];
+                        } else {
+                            // 相容舊資料
+                            if (selectedVal === f.followupTrigger) {
+                                optIdx = 0;
+                                matchedOpt = {
+                                    hasExtra: true,
+                                    extraLabel: f.followupLabel || '寄送地址'
+                                };
+                            }
+                        }
+
+                        if (matchedOpt && matchedOpt.hasExtra && matchedOpt.extraLabel) {
+                            const followupInput = document.getElementById(`customField_${index}_followup_${optIdx}`);
+                            if (followupInput && followupInput.value.trim()) {
+                                customData[`${f.name} - ${matchedOpt.extraLabel}`] = followupInput.value.trim();
+                            }
+                        }
                     }
                     return;
                 }
