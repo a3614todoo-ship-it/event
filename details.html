@@ -37,7 +37,14 @@
         <div class="event-detail-layout">
             <!-- 左側：詳細資訊 -->
             <div class="detail-main">
-                <img id="eventImage" class="detail-img" alt="活動海報" style="opacity: 0; transition: opacity 0.5s ease;">
+                <!-- 藝術沙龍多圖畫廊展示區 -->
+                <div class="event-gallery-container">
+                    <div class="gallery-main-display">
+                        <img id="eventImage" class="detail-img" alt="活動海報" style="opacity: 0; transition: opacity 0.4s ease, transform 0.4s ease;">
+                    </div>
+                    <!-- 縮圖排容器 -->
+                    <div id="galleryThumbnails" class="gallery-thumbnails-row" style="display: none;"></div>
+                </div>
                 <h1 id="eventName" class="event-title">載入中...</h1>
                 <div id="eventDescription" class="event-content">
                     正在準備精彩的活動內容，請稍候...

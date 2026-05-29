@@ -66,6 +66,104 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
+    // 多圖藝廊管理：即時預覽與本機智慧壓縮邏輯 (2026-05-28)
+    // ==========================================
+    window.updateImagePreview = function(value, index) {
+        const previewImg = document.getElementById(`imagePreview${index}`);
+        const placeholder = document.getElementById(`imagePlaceholder${index}`);
+        if (!previewImg || !placeholder) return;
+
+        const url = String(value || '').trim();
+        if (url) {
+            previewImg.src = url;
+            previewImg.style.display = 'block';
+            placeholder.style.display = 'none';
+        } else {
+            previewImg.src = '';
+            previewImg.style.display = 'none';
+            placeholder.style.display = 'block';
+        }
+    };
+
+    window.compressAndUploadImage = function(fileInput, index) {
+        const file = fileInput.files[0];
+        const statusSpan = document.getElementById(`uploadStatus${index}`);
+        if (!file) return;
+
+        if (statusSpan) {
+            statusSpan.textContent = '讀取中...';
+            statusSpan.style.color = '#d97706';
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                // 開始利用 Canvas 進行智慧壓縮
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                const MAX_WIDTH = 800;
+                const MAX_HEIGHT = 800;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // 強制轉換為 JPEG 並將畫質壓縮為 0.6
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                
+                // 寫入對應的輸入框與預覽
+                const pathInput = document.getElementById(`eventImage${index}`);
+                if (pathInput) {
+                    pathInput.value = compressedBase64;
+                    // 手動發送 input 事件觸發相關 UI 綁定
+                    pathInput.dispatchEvent(new Event('input'));
+                }
+                window.updateImagePreview(compressedBase64, index);
+
+                // 計算壓縮比率回報使用者
+                const origSize = file.size;
+                const newSize = Math.round(compressedBase64.length * 0.75);
+                const ratio = Math.round(((origSize - newSize) / origSize) * 100);
+
+                if (statusSpan) {
+                    statusSpan.textContent = `已成功壓縮 ${ratio > 0 ? ratio : 0}% (${(newSize / 1024).toFixed(1)}KB)`;
+                    statusSpan.style.color = '#10b981';
+                }
+            };
+            img.onerror = function() {
+                if (statusSpan) {
+                    statusSpan.textContent = '圖片解析失敗';
+                    statusSpan.style.color = '#ef4444';
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.onerror = function() {
+            if (statusSpan) {
+                statusSpan.textContent = '讀取檔案失敗';
+                statusSpan.style.color = '#ef4444';
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // ==========================================
     // 管理員登入與 UI 切換
     // ==========================================
     const loginScreen = document.getElementById('loginScreen');
@@ -181,6 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { key: 'waitlistPromoted', label: '遞補成功信', subject: '【遞補成功通知】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n您已成功遞補 {{活動名稱}} 的入場名額。\n\n{{活動資訊區塊}}\n\n{{QRCode}}\n\n{{報到須知區塊}}\n\n{{取消連結}}\n\n{{信件尾巴區塊}}' },
         { key: 'cancelled', label: '取消報名信', subject: '【報名取消確認】{{活動名稱}}', body: '親愛的 {{姓名}} 您好，\n\n我們已收到您的取消申請，{{活動名稱}} 的報名已取消。\n感謝您主動告知。\n\n{{信件尾巴區塊}}' }
     ];
+    const PAYMENT_ONLY_EMAIL_TEMPLATE_KEYS = new Set(['pendingPayment', 'paymentReported', 'paymentConfirmed', 'paymentReminder']);
 
     function getEventStartDate(eventData) {
         return eventData?.startDate || eventData?.date || '';
@@ -263,10 +362,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return defaults;
     }
 
+    function getEditingEventFee() {
+        const feeInput = document.getElementById('editEventFee');
+        return Math.max(parseInt(feeInput?.value, 10) || 0, 0);
+    }
+
+    function shouldShowEmailTemplateEditor(item) {
+        return getEditingEventFee() > 0 || !PAYMENT_ONLY_EMAIL_TEMPLATE_KEYS.has(item.key);
+    }
+
     function renderEmailTemplateEditors() {
         const container = document.getElementById('emailTemplatesContainer');
         if (!container) return;
-        container.innerHTML = EMAIL_TEMPLATE_CONFIG.map(item => {
+        const visibleTemplates = EMAIL_TEMPLATE_CONFIG.filter(shouldShowEmailTemplateEditor);
+        const feeNotice = getEditingEventFee() > 0 ? '' : `
+            <div style="background:#fdfaf5; border:1px solid var(--border-color); border-radius:12px; padding:12px 14px; color:var(--text-muted); margin-bottom:12px; line-height:1.6;">
+                免費活動不會顯示「待繳費通知信」、「匯款回報收到信」、「繳費提醒信」與「收款確認信」。
+            </div>
+        `;
+        container.innerHTML = feeNotice + visibleTemplates.map(item => {
             const tpl = currentEditingEmailTemplates[item.key] || {};
             return `
                 <details style="border:1px solid var(--border-color); border-radius:12px; padding:14px; margin-bottom:12px; background:#fff;">
@@ -363,11 +477,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function buildQrCodeHtml(regData) {
         if (!regData?.id) return '';
+        const eventName = regData.eventName || '藝境空間精選活動';
+        const userName = regData.userName || '貴賓';
+        const serial = (regData.id || '').substring(0, 8).toUpperCase();
+        
         return `
-        <div style="text-align:center; background:#ffffff; padding:30px; border-radius:16px; border:1px dashed #d97706; margin:24px 0;">
-            <p style="margin:0 0 15px 0; font-size:15px; font-weight:bold; color:#d97706;">您的報到 QR Code</p>
-            <img src="https://quickchart.io/chart?cht=qr&chs=180x180&chl=${encodeURIComponent(regData.id)}&choe=UTF-8" width="180" height="180" alt="QR Code" style="display:block; margin:0 auto;">
-            <p style="margin:15px 0 0 0; font-size:14px; color:#4a3728;">請於抵達現場時出示此 QR Code 報到</p>
+        <div style="max-width: 500px; margin: 24px auto; background-color: #fdfbf7; border: 2px solid #d97706; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(74, 55, 40, 0.08); font-family: system-ui, -apple-system, sans-serif; text-align: left;">
+            <table style="width: 100%; border-collapse: collapse; margin: 0; padding: 0;">
+                <tr>
+                    <!-- 左側存根聯 -->
+                    <td style="padding: 24px; vertical-align: top; border-right: 2px dashed rgba(217, 119, 6, 0.3); background-color: #fdfbf7;">
+                        <div style="font-size: 11px; letter-spacing: 2px; color: #d97706; font-weight: bold; margin-bottom: 8px;">藝境空間 ‧ ADMISSION TICKET</div>
+                        <div style="font-size: 16px; font-weight: bold; color: #4a3728; line-height: 1.4; margin: 10px 0;">${escapeHtml(eventName)}</div>
+                        <table style="width: 100%; margin-top: 15px; font-size: 13px; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding: 0 10px 0 0; vertical-align: top; width: 50%;">
+                                    <span style="font-size: 10px; color: #8c7361; display: block; margin-bottom: 2px;">貴賓姓名</span>
+                                    <strong style="color: #4a3728; font-size: 14px;">${escapeHtml(userName)}</strong>
+                                </td>
+                                <td style="padding: 0; vertical-align: top; width: 50%;">
+                                    <span style="font-size: 10px; color: #8c7361; display: block; margin-bottom: 2px;">席次序號</span>
+                                    <strong style="color: #4a3728; font-size: 14px; font-family: monospace;">${escapeHtml(serial)}</strong>
+                                </td>
+                            </tr>
+                        </table>
+                        <div style="font-size: 10px; color: #8c7361; margin-top: 20px; line-height: 1.4;">* 本憑證作為入場唯一識別，請妥善保管。</div>
+                    </td>
+                    <!-- 右側報到聯 -->
+                    <td style="width: 150px; padding: 20px 15px; text-align: center; vertical-align: middle; background-color: #fef3c7;">
+                        <div style="background-color: #ffffff; padding: 8px; border-radius: 8px; display: inline-block; border: 1px solid #d97706; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+                            <img src="https://quickchart.io/chart?cht=qr&chs=110x110&chl=${encodeURIComponent(regData.id)}&choe=UTF-8" width="110" height="110" alt="QR Code" style="display: block; margin: 0 auto; border: none;">
+                        </div>
+                        <div style="font-size: 10px; font-weight: bold; color: #b45309; margin-top: 8px; letter-spacing: 1px;">現場對準掃描</div>
+                    </td>
+                </tr>
+            </table>
         </div>`;
     }
 
@@ -651,7 +795,11 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(`extName${i}`).value = '';
             document.getElementById(`extVal${i}`).value = '';
         }
-        document.getElementById('editEventImage').value = '';
+        for (let i = 1; i <= 5; i++) {
+            document.getElementById(`eventImage${i}`).value = '';
+            document.getElementById(`uploadStatus${i}`).textContent = '';
+            updateImagePreview('', i);
+        }
         document.getElementById('editEventIsActive').checked = true;
         document.getElementById('editEventAllowWaitlist').checked = true;
         document.getElementById('editEventAutoPromote').checked = true;
@@ -664,6 +812,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('eventModalTitle').textContent = '新增活動';
         eventEditModal.style.display = 'block';
     });
+
+    const editEventFeeInput = document.getElementById('editEventFee');
+    if (editEventFeeInput) {
+        editEventFeeInput.addEventListener('input', renderEmailTemplateEditors);
+        editEventFeeInput.addEventListener('change', renderEmailTemplateEditors);
+    }
 
     if (addCustomFieldBtn) {
         addCustomFieldBtn.addEventListener('click', () => {
@@ -682,7 +836,18 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateCustomField = function(index, key, value) {
         if (currentEditingCustomFields[index]) {
             currentEditingCustomFields[index][key] = value;
+            if (key === 'type' && value === 'select' && !currentEditingCustomFields[index].optionsText && !Array.isArray(currentEditingCustomFields[index].options)) {
+                currentEditingCustomFields[index].optionsText = '現場自取\n寄送';
+                currentEditingCustomFields[index].followupTrigger = '寄送';
+                currentEditingCustomFields[index].followupLabel = '寄送地址';
+                currentEditingCustomFields[index].followupRequired = true;
+            }
         }
+    };
+
+    window.updateCustomFieldAndRender = function(index, key, value) {
+        window.updateCustomField(index, key, value);
+        renderCustomFieldEditors();
     };
 
     window.updateSurveyField = function(index, key, value) {
@@ -703,20 +868,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderCustomFieldEditors() {
         if (!customFieldsContainer) return;
-        customFieldsContainer.innerHTML = currentEditingCustomFields.map((f, index) => `
-            <div class="form-row" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px;">
-                <input type="text" placeholder="報名欄位 (如: 公司名稱)" value="${f.name}" onchange="updateCustomField(${index}, 'name', this.value)" style="flex: 2; min-width: 150px;">
-                <select onchange="updateCustomField(${index}, 'type', this.value)" style="flex: 1; min-width: 120px;">
+        customFieldsContainer.innerHTML = currentEditingCustomFields.map((f, index) => {
+            const optionsText = f.optionsText || (Array.isArray(f.options) ? f.options.join('\n') : '');
+            const selectSettings = f.type === 'select' ? `
+                <div style="width:100%; display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px; margin-top:4px;">
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">選項（一行一個）</label>
+                        <textarea rows="3" placeholder="例如：&#10;現場自取&#10;寄送" onchange="updateCustomField(${index}, 'optionsText', this.value)" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color);">${escapeHtml(optionsText)}</textarea>
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">選到此選項時顯示補充欄位</label>
+                        <input type="text" placeholder="例如：寄送" value="${escapeHtml(f.followupTrigger || '')}" onchange="updateCustomField(${index}, 'followupTrigger', this.value)" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); margin-bottom:8px;">
+                        <input type="text" placeholder="補充欄位名稱，例如：寄送地址" value="${escapeHtml(f.followupLabel || '')}" onchange="updateCustomField(${index}, 'followupLabel', this.value)" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color);">
+                        <label style="display:flex; align-items:center; gap:5px; font-size:0.82rem; color:var(--text-muted); margin-top:8px;">
+                            <input type="checkbox" ${f.followupRequired !== false ? 'checked' : ''} onchange="updateCustomField(${index}, 'followupRequired', this.checked)"> 補充欄位必填
+                        </label>
+                    </div>
+                </div>
+            ` : '';
+            return `
+            <div class="form-row" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; align-items: flex-start; border-bottom: 1px solid rgba(0,0,0,0.08); padding-bottom: 15px;">
+                <input type="text" placeholder="報名欄位 (如: 贈品取件方式)" value="${escapeHtml(f.name || '')}" onchange="updateCustomField(${index}, 'name', this.value)" style="flex: 2; min-width: 190px;">
+                <select onchange="updateCustomFieldAndRender(${index}, 'type', this.value)" style="flex: 1; min-width: 150px;">
                     <option value="text" ${f.type === 'text' ? 'selected' : ''}>單行文字</option>
                     <option value="tel" ${f.type === 'tel' ? 'selected' : ''}>電話 (手機)</option>
                     <option value="checkbox" ${f.type === 'checkbox' ? 'selected' : ''}>勾選 (Yes/No)</option>
+                    <option value="select" ${f.type === 'select' ? 'selected' : ''}>單選選項</option>
                 </select>
-                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem; white-space: nowrap; cursor: pointer; margin-right: auto;">
+                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85rem; white-space: nowrap; cursor: pointer; margin-right: auto; padding-top:8px;">
                     <input type="checkbox" ${f.required ? 'checked' : ''} onchange="updateCustomField(${index}, 'required', this.checked)"> 必填
                 </label>
                 <button type="button" class="btn-danger" onclick="removeCustomField(${index})" style="padding: 5px 12px; font-size: 1.2rem; line-height: 1; border-radius: 6px;">&times;</button>
+                ${selectSettings}
             </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     function renderSurveyFieldEditors() {
@@ -744,6 +930,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
         `).join('');
+    }
+
+    function normalizeCustomFieldsForSave(fields = []) {
+        return fields
+            .filter(f => String(f.name || '').trim() !== '')
+            .map(f => {
+                const normalized = { ...f, name: String(f.name || '').trim() };
+                if (normalized.type === 'select') {
+                    const source = normalized.optionsText || (Array.isArray(normalized.options) ? normalized.options.join('\n') : '');
+                    normalized.options = String(source || '')
+                        .split(/\r?\n/)
+                        .map(option => option.trim())
+                        .filter(Boolean);
+                    normalized.optionsText = normalized.options.join('\n');
+                    normalized.followupTrigger = String(normalized.followupTrigger || '').trim();
+                    normalized.followupLabel = String(normalized.followupLabel || '').trim();
+                    normalized.followupRequired = normalized.followupRequired !== false;
+                }
+                return normalized;
+            });
     }
 
     // ==========================================
@@ -953,6 +1159,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // 收集多圖藝廊資料
+        const imagesList = [];
+        for (let i = 1; i <= 5; i++) {
+            const imgPath = document.getElementById(`eventImage${i}`).value.trim();
+            if (imgPath) {
+                imagesList.push(imgPath);
+            }
+        }
+
+        if (imagesList.length === 0) {
+            alert('請至少填寫或上傳一張活動圖片 (圖片 1)');
+            return;
+        }
+
         const data = {
             name: document.getElementById('editEventName').value.trim(),
             capacity: parseInt(document.getElementById('editEventCapacity').value) || 0,
@@ -963,11 +1183,12 @@ document.addEventListener('DOMContentLoaded', () => {
             location: document.getElementById('editEventLocation').value.trim(),
             description: document.getElementById('editEventDesc').value.trim(),
             extDetails: extDetails,
-            image: document.getElementById('editEventImage').value.trim(),
+            image: imagesList[0] || '', // 相容舊有單圖封面欄位
+            images: imagesList,         // 儲存完整多圖陣列 (最多5張)
             isActive: document.getElementById('editEventIsActive').checked,
             allowWaitlist: document.getElementById('editEventAllowWaitlist').checked,
             autoPromote: document.getElementById('editEventAutoPromote').checked,
-            customFields: currentEditingCustomFields.filter(f => f.name.trim() !== ''),
+            customFields: normalizeCustomFieldsForSave(currentEditingCustomFields),
             emailTemplates: currentEditingEmailTemplates,
             fee: parseInt(document.getElementById('editEventFee').value) || 0,
             bankInfo: document.getElementById('editEventBankInfo').value.trim(),
@@ -1059,7 +1280,26 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        document.getElementById('editEventImage').value = ev.image || '';
+        // 清空並載入 5 個圖片槽
+        for (let i = 1; i <= 5; i++) {
+            document.getElementById(`eventImage${i}`).value = '';
+            document.getElementById(`uploadStatus${i}`).textContent = '';
+            updateImagePreview('', i);
+        }
+        
+        if (ev.images && Array.isArray(ev.images)) {
+            ev.images.forEach((imgUrl, idx) => {
+                if (idx < 5) {
+                    const slotNum = idx + 1;
+                    document.getElementById(`eventImage${slotNum}`).value = imgUrl || '';
+                    updateImagePreview(imgUrl, slotNum);
+                }
+            });
+        } else if (ev.image) {
+            // 舊活動資料相容
+            document.getElementById('eventImage1').value = ev.image || '';
+            updateImagePreview(ev.image, 1);
+        }
         document.getElementById('editEventIsActive').checked = ev.isActive !== false;
         document.getElementById('editEventAllowWaitlist').checked = ev.allowWaitlist !== false;
         document.getElementById('editEventAutoPromote').checked = ev.autoPromote !== false;

@@ -153,13 +153,61 @@ function plainTextToEmailHtml(text) {
     </div>`;
 }
 
+function getCustomFieldOptions(field = {}) {
+    const source = Array.isArray(field.options) ? field.options : String(field.optionsText || '').split(/\r?\n/);
+    return source.map(option => String(option || '').trim()).filter(Boolean);
+}
+
+window.toggleCustomFollowup = function(index) {
+    const field = currentEvent?.customFields?.[index];
+    if (!field) return;
+    const selectedOption = document.querySelector(`input[name="customField_${index}_option"]:checked`);
+    const followupWrap = document.getElementById(`customField_${index}_followup_wrap`);
+    const followupInput = document.getElementById(`customField_${index}_followup`);
+    if (!followupWrap || !followupInput) return;
+    const shouldShow = Boolean(field.followupTrigger) && selectedOption?.value === field.followupTrigger;
+    followupWrap.style.display = shouldShow ? 'block' : 'none';
+    followupInput.required = shouldShow && field.followupRequired !== false;
+    if (!shouldShow) followupInput.value = '';
+};
+
 function buildQrCodeHtml(data) {
     if (!data?.id) return '';
+    const eventName = data.eventName || '藝境空間精選活動';
+    const userName = data.userName || '貴賓';
+    const serial = (data.id || '').substring(0, 8).toUpperCase();
+    
     return `
-    <div style="text-align:center; background:#ffffff; padding:30px; border-radius:16px; border:1px dashed #d97706; margin:24px 0;">
-        <p style="margin:0 0 15px 0; font-size:15px; font-weight:bold; color:#d97706;">您的報到 QR Code</p>
-        <img src="https://quickchart.io/chart?cht=qr&chs=180x180&chl=${encodeURIComponent(data.id)}&choe=UTF-8" width="180" height="180" alt="QR Code" style="display:block; margin:0 auto;">
-        <p style="margin:15px 0 0 0; font-size:14px; color:#4a3728;">請於抵達現場時出示此 QR Code 報到</p>
+    <div style="max-width: 500px; margin: 24px auto; background-color: #fdfbf7; border: 2px solid #d97706; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(74, 55, 40, 0.08); font-family: system-ui, -apple-system, sans-serif; text-align: left;">
+        <table style="width: 100%; border-collapse: collapse; margin: 0; padding: 0;">
+            <tr>
+                <!-- 左側存根聯 -->
+                <td style="padding: 24px; vertical-align: top; border-right: 2px dashed rgba(217, 119, 6, 0.3); background-color: #fdfbf7;">
+                    <div style="font-size: 11px; letter-spacing: 2px; color: #d97706; font-weight: bold; margin-bottom: 8px;">藝境空間 ‧ ADMISSION TICKET</div>
+                    <div style="font-size: 16px; font-weight: bold; color: #4a3728; line-height: 1.4; margin: 10px 0;">${escapeHtml(eventName)}</div>
+                    <table style="width: 100%; margin-top: 15px; font-size: 13px; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 0 10px 0 0; vertical-align: top; width: 50%;">
+                                <span style="font-size: 10px; color: #8c7361; display: block; margin-bottom: 2px;">貴賓姓名</span>
+                                <strong style="color: #4a3728; font-size: 14px;">${escapeHtml(userName)}</strong>
+                            </td>
+                            <td style="padding: 0; vertical-align: top; width: 50%;">
+                                <span style="font-size: 10px; color: #8c7361; display: block; margin-bottom: 2px;">席次序號</span>
+                                <strong style="color: #4a3728; font-size: 14px; font-family: monospace;">${escapeHtml(serial)}</strong>
+                            </td>
+                        </tr>
+                    </table>
+                    <div style="font-size: 10px; color: #8c7361; margin-top: 20px; line-height: 1.4;">* 本憑證作為入場唯一識別，請妥善保管。</div>
+                </td>
+                <!-- 右側報到聯 -->
+                <td style="width: 150px; padding: 20px 15px; text-align: center; vertical-align: middle; background-color: #fef3c7;">
+                    <div style="background-color: #ffffff; padding: 8px; border-radius: 8px; display: inline-block; border: 1px solid #d97706; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+                        <img src="https://quickchart.io/chart?cht=qr&chs=110x110&chl=${encodeURIComponent(data.id)}&choe=UTF-8" width="110" height="110" alt="QR Code" style="display: block; margin: 0 auto; border: none;">
+                    </div>
+                    <div style="font-size: 10px; font-weight: bold; color: #b45309; margin-top: 8px; letter-spacing: 1px;">現場對準掃描</div>
+                </td>
+            </tr>
+        </table>
     </div>`;
 }
 
@@ -489,27 +537,72 @@ function renderUI() {
     }
     
     const imgEl = document.getElementById('eventImage');
+    const thumbnailsContainer = document.getElementById('galleryThumbnails');
     if (imgEl) {
-        const imageUrl = currentEvent.image || 'assets/hero_events_bg.png';
+        const defaultImage = 'assets/hero_events_bg.png';
+        const images = currentEvent.images && Array.isArray(currentEvent.images) && currentEvent.images.length > 0
+            ? currentEvent.images
+            : [currentEvent.image || defaultImage];
         
-        // 必須在設定 src 之前先綁定監聽器
+        // 1. 初始化設定大圖監聽
         imgEl.onload = () => {
             imgEl.style.opacity = '1';
+            imgEl.style.transform = 'scale(1)';
         };
         
         imgEl.onerror = () => {
             console.warn("圖片載入失敗，顯示預設圖");
-            imgEl.src = 'assets/hero_events_bg.png';
+            imgEl.src = defaultImage;
             imgEl.style.opacity = '1';
         };
 
-        imgEl.src = imageUrl;
-
-        // 處理快取情況
+        // 設定初始主圖
+        imgEl.src = images[0];
         if (imgEl.complete) {
             imgEl.style.opacity = '1';
         }
+
+        // 2. 渲染縮圖排
+        if (thumbnailsContainer) {
+            if (images.length > 1) {
+                thumbnailsContainer.style.display = 'flex';
+                thumbnailsContainer.innerHTML = images.map((imgUrl, idx) => {
+                    // 給每個縮圖微幅隨機旋轉 (-3deg ~ 3deg) 營造拍立得手繪質感
+                    const rotation = (Math.random() * 6 - 3).toFixed(1);
+                    const isActive = idx === 0 ? 'active' : '';
+                    return `
+                        <div class="gallery-thumb ${isActive}" data-index="${idx}" style="--rotation: ${rotation}deg;" onclick="switchGalleryImage(this, '${escapeHtml(imgUrl)}')">
+                            <img src="${escapeHtml(imgUrl)}" alt="縮圖 ${idx + 1}" onerror="this.src='${defaultImage}'">
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                thumbnailsContainer.style.display = 'none';
+                thumbnailsContainer.innerHTML = '';
+            }
+        }
     }
+
+    // 提供切換大圖的全局函數
+    window.switchGalleryImage = function(thumbEl, newSrc) {
+        const mainImg = document.getElementById('eventImage');
+        if (!mainImg || thumbEl.classList.contains('active')) return;
+
+        // 1. 移除先前 active 的縮圖
+        document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
+        
+        // 2. 設定目前點選的縮圖為 active
+        thumbEl.classList.add('active');
+
+        // 3. 轉場微動畫：先淡出並稍微縮小
+        mainImg.style.opacity = '0';
+        mainImg.style.transform = 'scale(0.98)';
+        
+        setTimeout(() => {
+            // 切換來源，觸發 onload 回調淡入與 scale(1)
+            mainImg.src = newSrc;
+        }, 150);
+    };
     // 渲染自訂表單欄位
     const dynamicFieldsContainer = document.getElementById('dynamicFieldsContainer');
     if (dynamicFieldsContainer) {
@@ -526,12 +619,37 @@ function renderUI() {
                     </div>
                     `;
                 }
-                
+
+                if (f.type === 'select') {
+                    const options = getCustomFieldOptions(f);
+                    const followupLabel = f.followupLabel || '';
+                    const followupHtml = followupLabel ? `
+                        <div id="customField_${index}_followup_wrap" class="form-group" style="display:none; margin-top:12px;">
+                            <label for="customField_${index}_followup">${escapeHtml(followupLabel)}${f.followupRequired !== false ? '<span style="color:#ef4444; margin-left:3px;">*</span>' : ''}</label>
+                            <input type="text" id="customField_${index}_followup" name="${escapeHtml(followupLabel)}" placeholder="請填寫${escapeHtml(followupLabel)}">
+                        </div>
+                    ` : '';
+                    return `
+                    <div class="form-group">
+                        <label>${escapeHtml(f.name)}${star}</label>
+                        <div style="display:grid; gap:10px;">
+                            ${options.map((option, optionIndex) => `
+                                <label for="customField_${index}_${optionIndex}" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:1px solid #e5e0d8; border-radius:12px; background:#fcfaf8; cursor:pointer; margin:0;">
+                                    <input type="radio" id="customField_${index}_${optionIndex}" name="customField_${index}_option" value="${escapeHtml(option)}" ${isRequired} onchange="toggleCustomFollowup(${index})" style="width:18px; height:18px; flex:0 0 auto;">
+                                    <span>${escapeHtml(option)}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                        ${followupHtml}
+                    </div>
+                    `;
+                }
+                 
                 const inputType = (f.type === 'select') ? 'text' : (f.type || 'text');
                 return `
                 <div class="form-group">
-                    <label for="customField_${index}">${f.name}${star}</label>
-                    <input type="${inputType}" id="customField_${index}" name="${f.name}" placeholder="請輸入${f.name}" ${isRequired}>
+                    <label for="customField_${index}">${escapeHtml(f.name)}${star}</label>
+                    <input type="${inputType}" id="customField_${index}" name="${escapeHtml(f.name)}" placeholder="請輸入${escapeHtml(f.name)}" ${isRequired}>
                 </div>
                 `;
             }).join('');
@@ -627,6 +745,16 @@ function setupForm() {
         if (currentEvent.customFields && Array.isArray(currentEvent.customFields)) {
             const customData = {};
             currentEvent.customFields.forEach((f, index) => {
+                if (f.type === 'select') {
+                    const selectedOption = document.querySelector(`input[name="customField_${index}_option"]:checked`);
+                    customData[f.name] = selectedOption?.value || '';
+                    const followupInput = document.getElementById(`customField_${index}_followup`);
+                    const followupLabel = f.followupLabel || '';
+                    if (followupInput && followupLabel && followupInput.value.trim()) {
+                        customData[`${f.name} - ${followupLabel}`] = followupInput.value.trim();
+                    }
+                    return;
+                }
                 const el = document.getElementById(`customField_${index}`);
                 if (el) {
                     if (f.type === 'checkbox') {
