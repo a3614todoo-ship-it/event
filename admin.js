@@ -189,44 +189,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // 升級：使用安全的 Firebase Authentication 進行管理員登入驗證
     adminLoginSubmit.addEventListener('click', async () => {
-        const user = adminUsernameInput.value.trim();
+        const email = adminUsernameInput.value.trim();
         const pass = adminPasswordInput.value.trim();
 
-        if (!user || !pass) { alert('請輸入帳號與密碼'); return; }
+        if (!email || !pass) { 
+            alert('請輸入管理員 Email 與密碼'); 
+            return; 
+        }
+
+        adminLoginSubmit.disabled = true;
+        adminLoginSubmit.textContent = '驗證中...';
 
         try {
-            const authRef = db.collection('admin_access').doc('auth');
-            const authDoc = await authRef.get();
+            // 調用 Firebase Auth API 進行安全認證
+            const userCredential = await firebase.auth().signInWithEmailAndPassword(email, pass);
             
-            if (authDoc.exists) {
-                const authData = authDoc.data();
-                if (user === authData.username && pass === authData.password) {
-                    isAdminLoggedIn = true;
-                    localStorage.setItem('isStandaloneEventAdmin', 'true');
-                    adminUsernameInput.value = '';
-                    adminPasswordInput.value = '';
-                    setView();
-                } else {
-                    alert('帳號或密碼錯誤');
-                }
-            } else {
-                if (confirm('偵測到系統尚未設定管理員帳號。\n您剛剛輸入的帳號與密碼，是否要設定為系統的「初始管理員帳號」？')) {
-                    await authRef.set({
-                        username: user,
-                        password: pass
-                    });
-                    alert('初始管理員帳號設定成功！請妥善保管您的密碼。');
-                    isAdminLoggedIn = true;
-                    localStorage.setItem('isStandaloneEventAdmin', 'true');
-                    adminUsernameInput.value = '';
-                    adminPasswordInput.value = '';
-                    setView();
-                }
-            }
+            // 登入成功
+            isAdminLoggedIn = true;
+            localStorage.setItem('isStandaloneEventAdmin', 'true');
+            
+            adminUsernameInput.value = '';
+            adminPasswordInput.value = '';
+            setView();
+            alert('管理員登入成功！');
         } catch (error) {
-            console.error("驗證失敗:", error);
-            alert("驗證系統連線失敗");
+            console.error("Firebase 登入失敗:", error);
+            // 顯示易懂的資安防禦提示
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                alert('帳號或密碼錯誤，請重新輸入。');
+            } else if (error.code === 'auth/invalid-email') {
+                alert('請輸入格式正確的 Email 帳號！\n(自 2026-05-29 起後台安全升級，帳號格式為 Email)');
+            } else {
+                alert(`登入失敗: ${error.message}`);
+            }
+        } finally {
+            adminLoginSubmit.disabled = false;
+            adminLoginSubmit.textContent = '登入管理系統';
         }
     });
 
@@ -836,11 +836,14 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateCustomField = function(index, key, value) {
         if (currentEditingCustomFields[index]) {
             currentEditingCustomFields[index][key] = value;
-            if (key === 'type' && value === 'select' && !currentEditingCustomFields[index].optionsText && !Array.isArray(currentEditingCustomFields[index].options)) {
-                currentEditingCustomFields[index].optionsText = '現場自取\n寄送';
-                currentEditingCustomFields[index].followupTrigger = '寄送';
-                currentEditingCustomFields[index].followupLabel = '寄送地址';
-                currentEditingCustomFields[index].followupRequired = true;
+            if (key === 'type' && value === 'select') {
+                if (!currentEditingCustomFields[index].optionsWithFollowup) {
+                    // 初始化時預設有兩個選項：現場自取、寄送
+                    currentEditingCustomFields[index].optionsWithFollowup = [
+                        { value: '現場自取', hasExtra: false, extraLabel: '', extraRequired: false },
+                        { value: '寄送', hasExtra: true, extraLabel: '寄送地址', extraRequired: true }
+                    ];
+                }
             }
         }
     };
@@ -848,6 +851,38 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateCustomFieldAndRender = function(index, key, value) {
         window.updateCustomField(index, key, value);
         renderCustomFieldEditors();
+    };
+
+    // 新增：更新特定單選選項的設定
+    window.updateSelectOptionDetail = function(fieldIndex, optionIndex, key, value) {
+        const field = currentEditingCustomFields[fieldIndex];
+        if (field && field.optionsWithFollowup && field.optionsWithFollowup[optionIndex]) {
+            field.optionsWithFollowup[optionIndex][key] = value;
+            // 如果修改了選項文字，我們不渲染整個編輯器，避免 input 失去焦點，除非有必要
+        }
+    };
+
+    window.updateSelectOptionDetailAndRender = function(fieldIndex, optionIndex, key, value) {
+        window.updateSelectOptionDetail(fieldIndex, optionIndex, key, value);
+        renderCustomFieldEditors();
+    };
+
+    // 新增：選項的動態增刪
+    window.addSelectOption = function(fieldIndex) {
+        const field = currentEditingCustomFields[fieldIndex];
+        if (field) {
+            if (!field.optionsWithFollowup) field.optionsWithFollowup = [];
+            field.optionsWithFollowup.push({ value: '', hasExtra: false, extraLabel: '', extraRequired: false });
+            renderCustomFieldEditors();
+        }
+    };
+
+    window.removeSelectOption = function(fieldIndex, optionIndex) {
+        const field = currentEditingCustomFields[fieldIndex];
+        if (field && field.optionsWithFollowup) {
+            field.optionsWithFollowup.splice(optionIndex, 1);
+            renderCustomFieldEditors();
+        }
     };
 
     window.updateSurveyField = function(index, key, value) {
@@ -869,23 +904,71 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderCustomFieldEditors() {
         if (!customFieldsContainer) return;
         customFieldsContainer.innerHTML = currentEditingCustomFields.map((f, index) => {
-            const optionsText = f.optionsText || (Array.isArray(f.options) ? f.options.join('\n') : '');
-            const selectSettings = f.type === 'select' ? `
-                <div style="width:100%; display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px; margin-top:4px;">
-                    <div>
-                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">選項（一行一個）</label>
-                        <textarea rows="3" placeholder="例如：&#10;現場自取&#10;寄送" onchange="updateCustomField(${index}, 'optionsText', this.value)" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color);">${escapeHtml(optionsText)}</textarea>
+            let selectSettings = '';
+            if (f.type === 'select') {
+                // 如果是舊的 select 資料結構，自動將 options 升級轉換為 optionsWithFollowup 物件陣列格式
+                if (!f.optionsWithFollowup) {
+                    let oldOptions = [];
+                    if (Array.isArray(f.options)) {
+                        oldOptions = f.options;
+                    } else if (f.optionsText) {
+                        oldOptions = f.optionsText.split(/\r?\n/).map(o => o.trim()).filter(Boolean);
+                    } else {
+                        oldOptions = ['現場自取', '寄送'];
+                    }
+
+                    f.optionsWithFollowup = oldOptions.map(opt => {
+                        // 相容舊的 followupTrigger 欄位
+                        const isTrigger = String(opt).trim() === String(f.followupTrigger || '寄送').trim();
+                        return {
+                            value: opt,
+                            hasExtra: isTrigger,
+                            extraLabel: isTrigger ? (f.followupLabel || '寄送地址') : '',
+                            extraRequired: isTrigger ? (f.followupRequired !== false) : false
+                        };
+                    });
+                }
+
+                // 渲染選項動態列表編輯器
+                const optionsHtml = f.optionsWithFollowup.map((opt, optIdx) => {
+                    const extraFieldConfig = opt.hasExtra ? `
+                        <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px; padding-left: 24px; width: 100%;">
+                            <i class="fas fa-level-up-alt fa-rotate-90" style="color: var(--text-muted); font-size: 0.85rem;"></i>
+                            <input type="text" placeholder="補充欄位標題，如: 寄送地址" value="${escapeHtml(opt.extraLabel || '')}" onchange="updateSelectOptionDetail(${index}, ${optIdx}, 'extraLabel', this.value)" style="flex: 2; padding: 6px 10px; font-size: 0.85rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <label style="display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; cursor: pointer;">
+                                <input type="checkbox" ${opt.extraRequired ? 'checked' : ''} onchange="updateSelectOptionDetail(${index}, ${optIdx}, 'extraRequired', this.checked)"> 必填
+                            </label>
+                        </div>
+                    ` : '';
+
+                    return `
+                    <div style="display: flex; flex-direction: column; gap: 4px; padding: 8px; border: 1px dashed var(--border-color); border-radius: 8px; background: #fffcf8; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                            <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: bold; width: 45px; flex-shrink: 0;">選項 ${optIdx + 1}</span>
+                            <input type="text" placeholder="輸入選項名稱" value="${escapeHtml(opt.value || '')}" onchange="updateSelectOptionDetail(${index}, ${optIdx}, 'value', this.value)" style="flex: 1; padding: 6px 10px; font-size: 0.88rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <label style="display: flex; align-items: center; gap: 4px; font-size: 0.82rem; color: var(--text-main); font-weight: 500; cursor: pointer; white-space: nowrap;">
+                                <input type="checkbox" ${opt.hasExtra ? 'checked' : ''} onchange="updateSelectOptionDetailAndRender(${index}, ${optIdx}, 'hasExtra', this.checked)"> 啟用補充欄位
+                            </label>
+                            <button type="button" class="btn-danger" onclick="removeSelectOption(${index}, ${optIdx})" style="padding: 3px 8px; font-size: 0.9rem; border-radius: 4px;">&times;</button>
+                        </div>
+                        ${extraFieldConfig}
                     </div>
-                    <div>
-                        <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">選到此選項時顯示補充欄位</label>
-                        <input type="text" placeholder="例如：寄送" value="${escapeHtml(f.followupTrigger || '')}" onchange="updateCustomField(${index}, 'followupTrigger', this.value)" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); margin-bottom:8px;">
-                        <input type="text" placeholder="補充欄位名稱，例如：寄送地址" value="${escapeHtml(f.followupLabel || '')}" onchange="updateCustomField(${index}, 'followupLabel', this.value)" style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color);">
-                        <label style="display:flex; align-items:center; gap:5px; font-size:0.82rem; color:var(--text-muted); margin-top:8px;">
-                            <input type="checkbox" ${f.followupRequired !== false ? 'checked' : ''} onchange="updateCustomField(${index}, 'followupRequired', this.checked)"> 補充欄位必填
-                        </label>
+                    `;
+                }).join('');
+
+                selectSettings = `
+                <div style="width:100%; margin-top:10px; background: #faf8f5; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span style="font-size: 0.85rem; font-weight: bold; color: var(--text-main);"><i class="fas fa-list-ul text-accent"></i> 選項一對一補充欄位配置</span>
+                        <button type="button" class="btn-secondary" onclick="addSelectOption(${index})" style="padding: 4px 12px; font-size: 0.8rem; border-radius: 6px; background: var(--accent); color: #fff; border: none; font-weight: bold;"><i class="fas fa-plus"></i> 新增選項</button>
+                    </div>
+                    <div style="max-height: 260px; overflow-y: auto; padding-right: 4px;">
+                        ${optionsHtml}
                     </div>
                 </div>
-            ` : '';
+                `;
+            }
+
             return `
             <div class="form-row" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; align-items: flex-start; border-bottom: 1px solid rgba(0,0,0,0.08); padding-bottom: 15px;">
                 <input type="text" placeholder="報名欄位 (如: 贈品取件方式)" value="${escapeHtml(f.name || '')}" onchange="updateCustomField(${index}, 'name', this.value)" style="flex: 2; min-width: 190px;">
@@ -938,15 +1021,33 @@ document.addEventListener('DOMContentLoaded', () => {
             .map(f => {
                 const normalized = { ...f, name: String(f.name || '').trim() };
                 if (normalized.type === 'select') {
-                    const source = normalized.optionsText || (Array.isArray(normalized.options) ? normalized.options.join('\n') : '');
-                    normalized.options = String(source || '')
-                        .split(/\r?\n/)
-                        .map(option => option.trim())
-                        .filter(Boolean);
-                    normalized.optionsText = normalized.options.join('\n');
-                    normalized.followupTrigger = String(normalized.followupTrigger || '').trim();
-                    normalized.followupLabel = String(normalized.followupLabel || '').trim();
-                    normalized.followupRequired = normalized.followupRequired !== false;
+                    if (Array.isArray(normalized.optionsWithFollowup)) {
+                        // 過濾掉空選項並標準化文字
+                        normalized.optionsWithFollowup = normalized.optionsWithFollowup
+                            .map(o => ({
+                                value: String(o.value || '').trim(),
+                                hasExtra: !!o.hasExtra,
+                                extraLabel: String(o.extraLabel || '').trim(),
+                                extraRequired: !!o.extraRequired
+                            }))
+                            .filter(o => o.value !== '');
+                        
+                        // 同步保留相容舊版的單一選項欄位 (供舊版前台或分析讀取)
+                        normalized.options = normalized.optionsWithFollowup.map(o => o.value);
+                        normalized.optionsText = normalized.options.join('\n');
+                        
+                        // 找到第一個有啟用補充欄位的選項作為舊版 fallback
+                        const firstFollowup = normalized.optionsWithFollowup.find(o => o.hasExtra);
+                        if (firstFollowup) {
+                            normalized.followupTrigger = firstFollowup.value;
+                            normalized.followupLabel = firstFollowup.extraLabel;
+                            normalized.followupRequired = firstFollowup.extraRequired;
+                        } else {
+                            normalized.followupTrigger = '';
+                            normalized.followupLabel = '';
+                            normalized.followupRequired = false;
+                        }
+                    }
                 }
                 return normalized;
             });
