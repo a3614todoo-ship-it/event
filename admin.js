@@ -1,13 +1,57 @@
 document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
-    // EmailJS 設定
+    // 郵件發送設定 (Google Apps Script API & EmailJS 雙軌相容)
     // ==========================================
     const EMAILJS_PUBLIC_KEY = '2NlEiWtXcW05Awbjt'; 
     const EMAILJS_SERVICE_ID = 'service_96agth6'; 
     const EMAILJS_TEMPLATE_ID = 'template_uz1rccd'; 
+    
+    // 2026-05-29 新增：Google Apps Script 代理發信服務 API 網址
+    // ⚠️ 部署後請將下方網址替換為您的 Apps Script 部署 URL
+    const GAS_EMAIL_API_URL = 'https://script.google.com/macros/s/AKfycbzcYc6qmA2MjxRcPb-YrQDCyNCsfAN_rY_v6Sigs_bsQx0BlgNzpFHNzSPll2wiqosp/exec';
 
     if (typeof emailjs !== 'undefined' && EMAILJS_PUBLIC_KEY) {
         emailjs.init(EMAILJS_PUBLIC_KEY);
+    }
+
+    // 核心中繼發信函數 (優先使用 GAS，如無設定或失敗則降級為 EmailJS)
+    async function sendMailThroughAgent(toEmail, toName, subject, htmlContent) {
+        // 如果有設定 GAS API 且不是預設的佔位符，則優先嘗試使用 GAS 發送
+        if (GAS_EMAIL_API_URL && !GAS_EMAIL_API_URL.includes('AKfycbyXXXXXXXXXXXXXXXX')) {
+            try {
+                console.log(`[GAS] 正在透過 Apps Script 發信給 ${toEmail}...`);
+                // 為了避開 CORS 限制，使用簡單請求（simple request）格式傳送
+                const response = await fetch(GAS_EMAIL_API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', 
+                    headers: {
+                        // 使用 text/plain 避免觸發 CORS preflight 檢查
+                        'Content-Type': 'text/plain'
+                    },
+                    body: JSON.stringify({
+                        toEmail: toEmail,
+                        toName: toName,
+                        subject: subject,
+                        htmlContent: htmlContent
+                    })
+                });
+                console.log("[GAS] 郵件發送指令已遞交至 Google Apps Script 伺服器！");
+                return { status: 200, text: "OK" };
+            } catch (err) {
+                console.warn("[GAS] 連線 GAS 發生網路錯誤，降級使用 EmailJS...", err);
+            }
+        }
+
+        // Fallback: 既有 EmailJS 方案
+        if (typeof emailjs === 'undefined') {
+            throw new Error("EmailJS 未載入且 GAS 服務未配置");
+        }
+        return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+            to_email: toEmail,
+            to_name: toName,
+            subject: subject,
+            message_html: htmlContent
+        });
     }
 
     // ==========================================
@@ -722,26 +766,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.sendTestEmailTemplate = async function(key) {
-        if (typeof emailjs === 'undefined') {
-            alert('EmailJS 尚未載入，無法寄送測試信。');
-            return;
-        }
         const savedEmail = localStorage.getItem('emailTemplateTestEmail') || '';
         const toEmail = prompt('請輸入要接收測試信的 Email：', savedEmail);
         if (!toEmail) return;
         localStorage.setItem('emailTemplateTestEmail', toEmail);
         const preview = buildEmailTemplatePreview(key);
         try {
-            await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-                to_email: toEmail,
-                to_name: '測試收件人',
-                subject: `[測試] ${preview.subject}`,
-                message_html: preview.messageHtml
-            });
+            await sendMailThroughAgent(
+                toEmail,
+                '測試收件人',
+                `[測試] ${preview.subject}`,
+                preview.messageHtml
+            );
             alert(`已寄出「${getEmailTemplateLabel(key)}」測試信到 ${toEmail}`);
         } catch (err) {
             console.error('寄送測試信失敗', err);
-            alert('測試信寄送失敗，請查看 Console 或 EmailJS 設定。');
+            alert('測試信寄送失敗，請確認郵件發送服務設定。');
         }
     };
 
@@ -1800,12 +1840,12 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         if (!templated) return Promise.resolve('paymentReminder disabled');
 
-        return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-            to_email: regData.userEmail,
-            to_name: regData.userName,
-            subject: templated.subject,
-            message_html: templated.messageHtml
-        });
+        return sendMailThroughAgent(
+            regData.userEmail,
+            regData.userName,
+            templated.subject,
+            templated.messageHtml
+        );
     }
 
     async function sendPaymentSuccessEmail(regData, eventData) {
@@ -1857,11 +1897,12 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         if (!templated) return Promise.resolve('paymentConfirmed disabled');
 
-        return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { 
-            to_email: regData.userEmail, 
-            subject: templated.subject, 
-            message_html: templated.messageHtml 
-        });
+        return sendMailThroughAgent(
+            regData.userEmail,
+            regData.userName,
+            templated.subject,
+            templated.messageHtml
+        );
     }
 
     window.cancelRegistration = function(regId) {
@@ -2102,11 +2143,12 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         if (!templated) return Promise.resolve('preEventReminder disabled');
 
-        return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { 
-            to_email: regData.userEmail, 
-            subject: templated.subject, 
-            message_html: templated.messageHtml 
-        });
+        return sendMailThroughAgent(
+            regData.userEmail,
+            regData.userName,
+            templated.subject,
+            templated.messageHtml
+        );
     }
 
     // ==========================================
@@ -2177,12 +2219,12 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         if (!templated) return Promise.resolve('surveyInvite disabled');
 
-        return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-            to_email: regData.userEmail,
-            to_name: regData.userName,
-            subject: templated.subject,
-            message_html: templated.messageHtml
-        });
+        return sendMailThroughAgent(
+            regData.userEmail,
+            regData.userName,
+            templated.subject,
+            templated.messageHtml
+        );
     }
 
     // ==========================================
@@ -2578,7 +2620,12 @@ document.addEventListener('DOMContentLoaded', () => {
             emailHtml
         );
         if (!templated) return;
-        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { to_email: regData.userEmail, subject: templated.subject, message_html: templated.messageHtml }).catch(console.error);
+        sendMailThroughAgent(
+            regData.userEmail,
+            regData.userName,
+            templated.subject,
+            templated.messageHtml
+        ).catch(console.error);
     }
 
     function sendCancelEmail(regData, eventData) {
@@ -2621,7 +2668,12 @@ document.addEventListener('DOMContentLoaded', () => {
             emailHtml
         );
         if (!templated) return;
-        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { to_email: regData.userEmail, subject: templated.subject, message_html: templated.messageHtml }).catch(console.error);
+        sendMailThroughAgent(
+            regData.userEmail,
+            regData.userName,
+            templated.subject,
+            templated.messageHtml
+        ).catch(console.error);
     }
 
     // 初始化畫面

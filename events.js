@@ -19,10 +19,52 @@ if (!firebase.apps.length) {
 }
 const db = firebase.firestore();
 
-// EmailJS 初始化 (使用定案版 Key)
+// EmailJS 初始化 (使用定案版 Key) 與 Google Apps Script 雙軌相容
 const EMAILJS_PUBLIC_KEY = '2NlEiWtXcW05Awbjt';
 if (typeof emailjs !== 'undefined') {
     emailjs.init(EMAILJS_PUBLIC_KEY);
+}
+
+// 2026-05-29 新增：Google Apps Script 代理發信服務 API 網址
+// ⚠️ 部署後請將下方網址替換為您的 Apps Script 部署 URL
+const GAS_EMAIL_API_URL = 'https://script.google.com/macros/s/AKfycbzcYc6qmA2MjxRcPb-YrQDCyNCsfAN_rY_v6Sigs_bsQx0BlgNzpFHNzSPll2wiqosp/exec';
+
+// 核心中繼發信函數 (優先使用 GAS，如無設定或失敗則降級為 EmailJS)
+async function sendMailThroughAgent(toEmail, toName, subject, htmlContent) {
+    if (GAS_EMAIL_API_URL && !GAS_EMAIL_API_URL.includes('AKfycbyXXXXXXXXXXXXXXXX')) {
+        try {
+            console.log(`[GAS] 正在透過 Apps Script 發信給 ${toEmail}...`);
+            // 為了避開 CORS 限制，使用簡單請求（simple request）格式傳送
+            await fetch(GAS_EMAIL_API_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    // 使用 text/plain 避免觸發 CORS preflight 檢查
+                    'Content-Type': 'text/plain'
+                },
+                body: JSON.stringify({
+                    toEmail: toEmail,
+                    toName: toName,
+                    subject: subject,
+                    htmlContent: htmlContent
+                })
+            });
+            console.log("[GAS] 郵件發送指令已遞交至 Google Apps Script 伺服器！");
+            return { status: 200, text: "OK" };
+        } catch (err) {
+            console.warn("[GAS] 連線 GAS 發生網路錯誤，降級使用 EmailJS...", err);
+        }
+    }
+
+    if (typeof emailjs === 'undefined') {
+        throw new Error("EmailJS 未載入且 GAS 服務未配置");
+    }
+    return emailjs.send('service_96agth6', 'template_uz1rccd', {
+        to_email: toEmail,
+        to_name: toName,
+        subject: subject,
+        message_html: htmlContent
+    });
 }
 
 let currentEvent = null;
@@ -1000,8 +1042,6 @@ function closeSuccessModal() {
 // 定案版：EmailJS 寄信邏輯與模板
 // ---------------------------------------------------------
 function sendRegistrationEmail(data, eventData) {
-    if (typeof emailjs === 'undefined') return;
-
     const isWaitlist = (data.status === 'waitlist');
     const isPendingPayment = (data.status === 'pending_payment');
     const templateKey = isPendingPayment ? 'pendingPayment' : (isWaitlist ? 'waitlistPromoted' : 'registrationSuccess');
@@ -1020,16 +1060,14 @@ function sendRegistrationEmail(data, eventData) {
         emailHtml = injectRichEmailBlocks(plainTextToEmailHtml(applyEmailTemplateText(customTemplate.body, buildEmailVars(data, eventData))), data, eventData, templateKey);
     }
 
-    const templateParams = {
-        to_email: data.userEmail,
-        to_name: data.userName,
-        subject: subjectLine,
-        message_html: emailHtml
-    };
-
-    emailjs.send('service_96agth6', 'template_uz1rccd', templateParams)
-        .then(() => console.log("Email sent successfully"))
-        .catch(err => console.error("Email failed:", err));
+    sendMailThroughAgent(
+        data.userEmail,
+        data.userName,
+        subjectLine,
+        emailHtml
+    )
+    .then(() => console.log("Email sent successfully"))
+    .catch(err => console.error("Email failed:", err));
 }
 
 function generateEventEmailHTML(data, eventData) {
