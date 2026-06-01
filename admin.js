@@ -76,32 +76,56 @@ document.addEventListener('DOMContentLoaded', () => {
     let popularChart = null;
     let utmSourceChart = null;
 
+    let eventsUnsubscribe = null;
+    let registrationsUnsubscribe = null;
+
     try {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
         console.log("Firebase 初始化成功");
 
-        // 監聽活動
-        db.collection("events").orderBy("date", "asc").onSnapshot((snapshot) => {
-            events = [];
-            snapshot.forEach((doc) => {
-                events.push({ id: doc.id, ...doc.data() });
-            });
-            if (isAdminLoggedIn) {
-                renderAdminEventsList();
-                updateCheckinSelect();
-            }
-        });
+        // 使用 Auth 狀態變更監聽器，確保取得使用者 Token 後才訂閱 Firestore 資料
+        firebase.auth().onAuthStateChanged((user) => {
+            // 取消先前的訂閱以防重複監聽
+            if (eventsUnsubscribe) eventsUnsubscribe();
+            if (registrationsUnsubscribe) registrationsUnsubscribe();
 
-        // 監聽報名
-        db.collection("event_registrations").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-            eventRegistrations = [];
-            snapshot.forEach((doc) => {
-                eventRegistrations.push({ id: doc.id, ...doc.data() });
-            });
-            if (isAdminLoggedIn) {
-                renderCheckinList();
-                renderAnalytics();
+            if (user) {
+                console.log("Firebase Auth：管理員已登入", user.email);
+                isAdminLoggedIn = true;
+                localStorage.setItem('isStandaloneEventAdmin', 'true');
+                setView();
+
+                // 1. 監聽活動
+                eventsUnsubscribe = db.collection("events").orderBy("date", "asc").onSnapshot((snapshot) => {
+                    events = [];
+                    snapshot.forEach((doc) => {
+                        events.push({ id: doc.id, ...doc.data() });
+                    });
+                    renderAdminEventsList();
+                    updateCheckinSelect();
+                }, (error) => {
+                    console.error("載入活動資料失敗:", error);
+                });
+
+                // 2. 監聽報名
+                registrationsUnsubscribe = db.collection("event_registrations").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+                    eventRegistrations = [];
+                    snapshot.forEach((doc) => {
+                        eventRegistrations.push({ id: doc.id, ...doc.data() });
+                    });
+                    renderCheckinList();
+                    renderAnalytics();
+                    // 在活動列表重新渲染，確保更新報名人數/總量狀態
+                    renderAdminEventsList();
+                }, (error) => {
+                    console.error("載入報名名單失敗:", error);
+                });
+            } else {
+                console.log("Firebase Auth：未登入");
+                isAdminLoggedIn = false;
+                localStorage.removeItem('isStandaloneEventAdmin');
+                setView();
             }
         });
 
