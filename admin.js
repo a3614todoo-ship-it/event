@@ -298,7 +298,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    logoutBtn.addEventListener('click', () => {
+    logoutBtn.addEventListener('click', async () => {
+        try {
+            // 同時登出 Firebase Auth 狀態，徹底清除瀏覽器憑證
+            await firebase.auth().signOut();
+            console.log("Firebase Auth 登出成功");
+        } catch (error) {
+            console.error("Firebase Auth 登出失敗:", error);
+        }
         isAdminLoggedIn = false;
         localStorage.removeItem('isStandaloneEventAdmin');
         location.href = 'index.html';
