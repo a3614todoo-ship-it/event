@@ -193,8 +193,9 @@ function updateEventDetails() {
 
 // 渲染進度數據與表格名單
 function renderStatsAndList() {
+    // 正常有效的報名名單（不含已取消、已逾期等失效狀態的報名）
     const activeRegs = registrations.filter(r => r.status !== 'cancelled' && r.status !== 'payment_expired');
-    const checkedInRegs = activeRegs.filter(r => r.status === 'checkedin' || r.checkedIn === true);
+    const checkedInRegs = registrations.filter(r => r.status === 'checkedin' || r.checkedIn === true);
     
     totalRegSpan.textContent = activeRegs.length;
     totalCheckinSpan.textContent = checkedInRegs.length;
@@ -202,14 +203,18 @@ function renderStatsAndList() {
     const query = searchInput.value.trim().toLowerCase();
     const filter = statusFilter.value;
     
-    let filtered = activeRegs;
+    // 預設列出所有人（包含已取消與逾期以求資料一致）
+    let filtered = [...registrations];
     
     // 狀態過濾
     if (filter === 'registered') {
-        filtered = activeRegs.filter(r => r.status !== 'checkedin' && !r.checkedIn);
+        // 未報到的有效名單
+        filtered = registrations.filter(r => r.status !== 'checkedin' && !r.checkedIn && r.status !== 'cancelled' && r.status !== 'payment_expired' && r.status !== 'waiting');
     } else if (filter === 'checkedin') {
-        filtered = activeRegs.filter(r => r.status === 'checkedin' || r.checkedIn);
+        // 已報到的名單
+        filtered = registrations.filter(r => r.status === 'checkedin' || r.checkedIn === true);
     } else if (filter === 'waiting') {
+        // 候補中名單
         filtered = registrations.filter(r => r.status === 'waiting');
     }
     
@@ -235,12 +240,22 @@ function renderStatsAndList() {
         let statusBadge = `<span class="badge badge-registered">已報名</span>`;
         if (isChecked) statusBadge = `<span class="badge badge-checkedin">已報到</span>`;
         if (r.status === 'waiting') statusBadge = `<span class="badge badge-waiting">候補中</span>`;
+        if (r.status === 'cancelled') statusBadge = `<span class="badge" style="background-color: #fca5a5; color: #b91c1c;">已取消</span>`;
+        if (r.status === 'payment_expired') statusBadge = `<span class="badge" style="background-color: #e5e7eb; color: #374151;">已逾期</span>`;
+        if (r.status === 'pending_payment') statusBadge = `<span class="badge" style="background-color: #fef3c7; color: #b45309;">待繳費</span>`;
+        if (r.status === 'payment_reported') statusBadge = `<span class="badge" style="background-color: #dbeafe; color: #1e40af;">待對帳</span>`;
         
         const checkinTime = r.checkinTime ? new Date(r.checkinTime).toLocaleTimeString('zh-TW', {hour12:false, hour:'2-digit', minute:'2-digit'}) : '-';
         
-        const button = isChecked 
-            ? `<button class="action-btn btn-uncheck" onclick="updateCheckinStatus('${r.id}', false)"><i class="fa-solid fa-rotate-left"></i> 取消報到</button>`
-            : `<button class="action-btn btn-checkin" onclick="updateCheckinStatus('${r.id}', true)"><i class="fa-solid fa-check"></i> 點擊報到</button>`;
+        // 失效的報名不能進行報到操作
+        const isExpiredOrCancelled = r.status === 'cancelled' || r.status === 'payment_expired';
+        
+        let button = '';
+        if (!isExpiredOrCancelled && r.status !== 'waiting') {
+            button = isChecked 
+                ? `<button class="action-btn btn-uncheck" onclick="updateCheckinStatus('${r.id}', false)"><i class="fa-solid fa-rotate-left"></i> 取消報到</button>`
+                : `<button class="action-btn btn-checkin" onclick="updateCheckinStatus('${r.id}', true)"><i class="fa-solid fa-check"></i> 點擊報到</button>`;
+        }
             
         return `
             <tr>
@@ -249,7 +264,7 @@ function renderStatsAndList() {
                 <td>${escapeHtml(phone)}</td>
                 <td>${statusBadge}</td>
                 <td style="color: var(--text-muted); font-size: 0.85rem;">${checkinTime}</td>
-                <td style="text-align: right;">${r.status === 'waiting' ? '-' : button}</td>
+                <td style="text-align: right;">${button}</td>
             </tr>
         `;
     }).join('');
