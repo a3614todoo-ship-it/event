@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>藝境空間 ‧ 現場報到系統</title>
+    <!-- 引入 Google Fonts 保持一致風格 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-paper: #fdfbf7;
+            --bg-card: #ffffff;
+            --text-main: #4a3728;
+            --text-muted: #8d7a6b;
+            --accent: #d97706;
+            --accent-hover: #b45309;
+            --border-color: #e5e0d8;
+            --success: #10b981;
+            --shadow: 0 4px 20px rgba(74, 55, 40, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-paper);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 頂部導覽列 */
+        header {
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        }
+
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo i {
+            color: var(--accent);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logout-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 8px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .logout-btn:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+            background-color: rgba(217, 119, 6, 0.03);
+        }
+
+        /* 登入畫面 */
+        #loginScreen {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .login-card h2 {
+            margin-bottom: 25px;
+            letter-spacing: 3px;
+        }
+
+        .form-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 1rem;
+            outline: none;
+            background-color: #fcfbf9;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--accent);
+            background-color: #fff;
+        }
+
+        .login-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 2px;
+            box-shadow: 0 4px 15px rgba(217, 119, 6, 0.15);
+            transition: all 0.2s;
+        }
+
+        .login-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(217, 119, 6, 0.25);
+        }
+
+        /* 現場主面板 */
+        #checkinPanel {
+            flex: 1;
+            padding: 30px;
+            display: none;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* 控制列：選擇活動與報到進度 */
+        .control-bar {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 25px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .select-wrapper {
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .select-wrapper label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+
+        .event-select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 1rem;
+            color: var(--text-main);
+            outline: none;
+            cursor: pointer;
+            background-color: #fdfcfb;
+        }
+
+        .stats-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+            background: #faf8f5;
+            padding: 12px 24px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-val {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* 主欄位分流：掃描器與名單 */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 25px;
+            align-items: start;
+        }
+
+        @media (max-width: 992px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 掃描側邊欄 */
+        .scanner-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 30px;
+        }
+
+        .scanner-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .scanner-container {
+            width: 100%;
+            aspect-ratio: 1;
+            background-color: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid var(--border-color);
+        }
+
+        #reader {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* 掃描狀態顯示 */
+        .scan-feedback {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 500;
+            display: none;
+        }
+
+        .scan-feedback.success {
+            display: block;
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .scan-feedback.error {
+            display: block;
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* 名單列表側邊欄 */
+        .list-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+        }
+
+        /* 搜尋與篩選 */
+        .search-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .search-input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .search-input-wrapper i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 15px 12px 45px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            outline: none;
+            background-color: #faf9f6;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent);
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(217,119,6,0.05);
+        }
+
+        .filter-select {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            outline: none;
+            background-color: #faf9f6;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        /* 名單表格 */
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .checkin-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        .checkin-table th {
+            background-color: #faf8f5;
+            padding: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .checkin-table td {
+            padding: 14px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        .checkin-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .checkin-table tr:hover td {
+            background-color: #fdfcfb;
+        }
+
+        /* 狀態標籤 */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-registered { background-color: #fef3c7; color: #d97706; }
+        .badge-checkedin { background-color: #d1fae5; color: #059669; }
+        .badge-waiting { background-color: #f3f4f6; color: #4b5563; }
+
+        /* 報到操作按鈕 */
+        .action-btn {
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-checkin {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .btn-checkin:hover {
+            background-color: #059669;
+            transform: translateY(-1px);
+        }
+
+        .btn-uncheck {
+            background-color: #fee2e2;
+            color: #ef4444;
+        }
+
+        .btn-uncheck:hover {
+            background-color: #fecaca;
+        }
+
+        /* 模態彈出窗 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(74, 55, 40, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background-color: var(--bg-card);
+            border-radius: 24px;
+            padding: 30px;
+            width: 90%;
+            max-width: 480px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            border: 1px solid var(--border-color);
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+        }
+
+        .modal.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .modal-icon.success { color: var(--success); }
+        .modal-icon.error { color: #ef4444; }
+
+        .modal-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .modal-desc {
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .modal-btn {
+            padding: 10px 24px;
+            background-color: var(--text-main);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .modal-btn:hover {
+            background-color: #35271d;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <i class="fa-solid fa-clipboard-user"></i>
+            <span>藝境空間 ‧ 現場報到</span>
+        </div>
+        <div class="user-info" id="userInfo" style="display: none;">
+            <span id="userEmail" style="font-weight: 500;"></span>
+            <button class="logout-btn" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> 登出</button>
+        </div>
+    </header>
+
+    <!-- 登入介面 -->
+    <div id="loginScreen">
+        <div class="login-card">
+            <h2>管理員登入</h2>
+            <div class="form-group">
+                <label for="adminUsername">帳號 (Email)</label>
+                <input type="email" id="adminUsername" placeholder="請輸入 Email 帳號">
+            </div>
+            <div class="form-group">
+                <label for="adminPassword">密碼</label>
+                <input type="password" id="adminPassword" placeholder="請輸入密碼">
+            </div>
+            <button class="login-submit" id="loginSubmit">登入系統</button>
+        </div>
+    </div>
+
+    <!-- 報到主系統介面 -->
+    <div id="checkinPanel">
+        <!-- 控制列 -->
+        <div class="control-bar">
+            <div class="select-wrapper">
+                <label for="eventSelect">選擇當天活動項目</label>
+                <select id="eventSelect" class="event-select">
+                    <option value="">加載活動項目中...</option>
+                </select>
+            </div>
+            <div class="stats-wrapper">
+                <div class="stat-item">
+                    <div class="stat-val" id="totalCap">0</div>
+                    <div class="stat-label">活動總名額</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-val" id="totalReg">0</div>
+                    <div class="stat-label">已成功報名</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-val" id="totalCheckin" style="color: var(--success);">0</div>
+                    <div class="stat-label">現場已報到</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主區塊 -->
+        <div class="main-grid">
+            <!-- 掃描欄 -->
+            <div class="scanner-card">
+                <h3><i class="fa-solid fa-camera"></i> QR Code 掃描器</h3>
+                <div class="scanner-container">
+                    <div id="reader"></div>
+                </div>
+                <div id="scanFeedback" class="scan-feedback"></div>
+                <div style="margin-top: 15px; font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; text-align: center;">
+                    請將參加者信件中的 QR Code 放置於鏡頭前<br>掃描成功後系統將會自動對帳報到
+                </div>
+            </div>
+
+            <!-- 名單搜尋與手動報到 -->
+            <div class="list-card">
+                <div class="search-row">
+                    <div class="search-input-wrapper">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="searchInput" class="search-input" placeholder="搜尋姓名、手機號碼或報名序號...">
+                    </div>
+                    <select id="statusFilter" class="filter-select">
+                        <option value="all">所有狀態</option>
+                        <option value="registered">已報名 (未報到)</option>
+                        <option value="checkedin">已完成報到</option>
+                        <option value="waiting">候補登記中</option>
+                    </select>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="checkin-table">
+                        <thead>
+                            <tr>
+                                <th>報名序號</th>
+                                <th>姓名</th>
+                                <th>手機</th>
+                                <th>狀態</th>
+                                <th>報到時間</th>
+                                <th style="text-align: right;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="checkinListBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                                    請先選擇一個活動項目以載入報到名單
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 掃描回饋彈窗 -->
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <div class="modal-icon" id="modalIcon"></div>
+            <div class="modal-title" id="modalTitle"></div>
+            <div class="modal-desc" id="modalDesc"></div>
+            <button class="modal-btn" onclick="closeFeedbackModal()">確認</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <!-- QRCode 掃描 SDK (用 html5-qrcode 輕量鏡頭庫) -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <!-- 主控 logic -->
+    <script src="checkin.js"></script>
+</body>
+</html>
