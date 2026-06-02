@@ -194,8 +194,8 @@ function updateEventDetails() {
 // 渲染進度數據與表格名單
 function renderStatsAndList() {
     // 正常有效的報名名單（不含已取消、已逾期等失效狀態的報名）
-    const activeRegs = registrations.filter(r => r.status !== 'cancelled' && r.status !== 'payment_expired');
-    const checkedInRegs = registrations.filter(r => r.status === 'checkedin' || r.checkedIn === true);
+    const activeRegs = registrations.filter(r => !isStatusCancelled(r.status));
+    const checkedInRegs = registrations.filter(r => isStatusCheckedIn(r));
     
     totalRegSpan.textContent = activeRegs.length;
     totalCheckinSpan.textContent = checkedInRegs.length;
@@ -209,10 +209,10 @@ function renderStatsAndList() {
     // 狀態過濾
     if (filter === 'registered') {
         // 未報到的有效名單
-        filtered = registrations.filter(r => r.status !== 'checkedin' && !r.checkedIn && r.status !== 'cancelled' && r.status !== 'payment_expired' && r.status !== 'waiting');
+        filtered = registrations.filter(r => !isStatusCheckedIn(r) && !isStatusCancelled(r.status) && r.status !== 'waiting');
     } else if (filter === 'checkedin') {
         // 已報到的名單
-        filtered = registrations.filter(r => r.status === 'checkedin' || r.checkedIn === true);
+        filtered = registrations.filter(r => isStatusCheckedIn(r));
     } else if (filter === 'waiting') {
         // 候補中名單
         filtered = registrations.filter(r => r.status === 'waiting');
@@ -233,7 +233,7 @@ function renderStatsAndList() {
     }
     
     checkinListBody.innerHTML = filtered.map(r => {
-        const isChecked = r.status === 'checkedin' || r.checkedIn === true;
+        const isChecked = isStatusCheckedIn(r);
         const phone = r.userPhone || '無';
         const serial = (r.id || '').substring(0, 8).toUpperCase();
         
@@ -248,7 +248,7 @@ function renderStatsAndList() {
         const checkinTime = r.checkinTime ? new Date(r.checkinTime).toLocaleTimeString('zh-TW', {hour12:false, hour:'2-digit', minute:'2-digit'}) : '-';
         
         // 失效的報名不能進行報到操作
-        const isExpiredOrCancelled = r.status === 'cancelled' || r.status === 'payment_expired';
+        const isExpiredOrCancelled = isStatusCancelled(r.status);
         
         let button = '';
         if (!isExpiredOrCancelled && r.status !== 'waiting') {
@@ -275,15 +275,38 @@ searchInput.addEventListener('input', renderStatsAndList);
 statusFilter.addEventListener('change', renderStatsAndList);
 
 // ==========================================
-// 3. 報到寫入與異動
+// 3. 狀態判定輔助函數（相容 admin.js 的 checked-in 與 checkedin 兩種格式）
 // ==========================================
 
-// 執行報到 / 取消報到狀態寫入
+// 判斷報名狀態是否為「已報到」
+function isStatusCheckedIn(reg) {
+    const s = normalizeStatus(reg.status);
+    return s === 'checked-in' || s === 'checkedin' || reg.checkedIn === true;
+}
+
+// 判斷報名狀態是否為「已失效」（取消或逾期）
+function isStatusCancelled(status) {
+    return status === 'cancelled' || status === 'payment_expired';
+}
+
+// 標準化狀態字串（去除空白、隱藏字元）
+function normalizeStatus(status) {
+    return String(status || '')
+        .toLowerCase()
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .trim();
+}
+
+// ==========================================
+// 4. 報到寫入與異動
+// ==========================================
+
+// 執行報到 / 取消報到狀態寫入（使用與 admin.js 一致的 checked-in 格式）
 window.updateCheckinStatus = async function(regId, checkInBool) {
     if (!regId) return;
     try {
         const updateData = {
-            status: checkInBool ? 'checkedin' : 'registered',
+            status: checkInBool ? 'checked-in' : 'registered',
             checkedIn: checkInBool,
             checkinTime: checkInBool ? new Date().toISOString() : firebase.firestore.FieldValue.delete()
         };
@@ -297,7 +320,7 @@ window.updateCheckinStatus = async function(regId, checkInBool) {
 };
 
 // ==========================================
-// 4. 相機鏡頭 QR Code 掃描模組
+// 5. 相機鏡頭 QR Code 掃描模組（直接啟動後鏡頭，與後台掃描方式一致）
 // ==========================================
 
 function startCameraScanner() {
@@ -305,22 +328,44 @@ function startCameraScanner() {
     setTimeout(() => {
         if (html5QrcodeScanner) return;
         
-        html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-            fps: 10, 
-            qrbox: { width: 220, height: 220 },
-            rememberLastUsedCamera: true
-        });
+        // 使用 Html5Qrcode（非 Scanner），直接啟動相機，無多餘 UI
+        html5QrcodeScanner = new Html5Qrcode("reader");
         
-        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+        
+        // 優先使用後鏡頭（environment），與後台報到掃描一致
+        html5QrcodeScanner.start(
+            { facingMode: "environment" },
+            config,
+            onScanSuccess
+        ).catch(err => {
+            console.warn("後鏡頭啟動失敗，嘗試前鏡頭...", err);
+            // 若後鏡頭失敗（例如桌機），嘗試啟動前鏡頭
+            html5QrcodeScanner.start(
+                { facingMode: "user" },
+                config,
+                onScanSuccess
+            ).catch(err2 => {
+                console.error("無法開啟任何相機:", err2);
+                const feedback = document.getElementById('scanFeedback');
+                if (feedback) {
+                    feedback.className = 'scan-feedback error';
+                    feedback.textContent = '無法啟動相機，請檢查瀏覽器的相機權限設定。';
+                    feedback.style.display = 'block';
+                }
+            });
+        });
     }, 500);
 }
 
 function stopCameraScanner() {
-    if (html5QrcodeScanner) {
-        html5QrcodeScanner.clear().then(() => {
+    if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+        html5QrcodeScanner.stop().then(() => {
             html5QrcodeScanner = null;
+            console.log("掃描器已停止");
         }).catch(err => {
             console.error("相機停止發生錯誤:", err);
+            html5QrcodeScanner = null;
         });
     }
 }
@@ -332,7 +377,7 @@ async function onScanSuccess(decodedText) {
         return;
     }
     
-    // 預防重疊掃描
+    // 預防重疊掃描：先暫停相機
     stopCameraScanner();
     
     // 解析掃到的 ID (我們的連結格式通常為 cancel.html?id=DOCUMENT_ID&...)
@@ -374,14 +419,14 @@ async function onScanSuccess(decodedText) {
         }
 
         // 檢查狀態是否已被取消
-        if (data.status === 'cancelled' || data.status === 'payment_expired') {
+        if (isStatusCancelled(data.status)) {
             showFeedback(false, "此報名已失效", `此報名已於系統中辦理「取消」或「逾期未繳費」，狀態為: ${data.status}。`);
             startCameraScanner();
             return;
         }
 
-        // 檢查是否已經完成報到
-        if (data.status === 'checkedin' || data.checkedIn === true) {
+        // 檢查是否已經完成報到（相容兩種格式）
+        if (isStatusCheckedIn(data)) {
             showFeedback(true, "已重複報到", `報名人：<strong>${escapeHtml(data.userName)}</strong><br>此帳號先前已於 ${data.checkinTime ? new Date(data.checkinTime).toLocaleTimeString('zh-TW', {hour12:false}) : ''} 完成報到，請勿重複掃描。`);
             startCameraScanner();
             return;
@@ -399,13 +444,8 @@ async function onScanSuccess(decodedText) {
     }
 }
 
-// 掃描失敗 (每秒數次，通常忽略)
-function onScanFailure(error) {
-    // 一般不對頻繁的失敗拋出提示，避免干擾使用
-}
-
 // ==========================================
-// 5. 掃描彈出回饋 UI
+// 6. 掃描彈出回饋 UI
 // ==========================================
 
 function showFeedback(isSuccess, title, desc) {
@@ -435,3 +475,4 @@ function escapeHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
 }
+
